@@ -1,6 +1,6 @@
 dataset:
   name: SemanticKITTI
-  dataset_path:  /data/datasets/public_datasets/semantic_kitti
+  dataset_path: /data/datasets/public_datasets/semantic_kitti
   cache_dir: ./logs/cache
   class_weights: [55437630, 320797, 541736, 2578735, 3274484, 552662, 184064,
     78858, 240942562, 17294618, 170599734, 6369672, 230413074, 101130274,
@@ -16,14 +16,14 @@ dataset:
 model:
   name: RandLANet
   batcher: DefaultBatcher
-  ckpt_path: ./logs/checkpoints/best_model.pth
+  ckpt_path: #
   num_neighbors: 16
   num_layers: 4
   num_points: 45056
   num_classes: 19
   ignored_label_inds: [0]
   sub_sampling_ratio: [4, 4, 4, 4]
-  in_channels: 3
+  in_channels: 4  # xyzi 
   dim_features: 8
   dim_output: [16, 64, 128, 256]
   grid_size: 0.06
@@ -32,6 +32,8 @@ model:
       dim: [0, 1]
 pipeline:
   name: SemanticSegmentation
+  num_workers: 0 # known ml3d bug 
+  pin_memory: false # known ml3d bug
   optimizer:
     lr: 0.001
   batch_size: 1
@@ -40,7 +42,7 @@ pipeline:
   save_ckpt_freq: 5
   scheduler_gamma: 0.9886
   test_batch_size: 1
-  train_sum_dir: train_log
+  train_sum_dir: ./logs/train_logs/
   val_batch_size: 2
   summary:
     record_for: []

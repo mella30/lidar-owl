@@ -2,7 +2,8 @@ import os
 import open3d.ml.torch as ml3d_torch
 import open3d.ml as ml3d
 
-DATA_DIR = '/data/'
+# DATA_DIR = '/data/'
+DATA_DIR = '/Users/m30/data/'
 
 def main():
     # read config file
@@ -16,7 +17,7 @@ def main():
 
     model = ml3d_torch.models.RandLANet(**cfg.model)
 
-    pipeline = ml3d_torch.pipelines.SemanticSegmentation(model=model, dataset=dataset, max_epoch=100)
+    pipeline = ml3d_torch.pipelines.SemanticSegmentation(model=model, dataset=dataset, **cfg.pipeline)
     pipeline.run_train()
 
     print("Training and testing completed.")
