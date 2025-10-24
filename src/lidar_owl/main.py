@@ -1,27 +1,21 @@
 import os
-import open3d.ml.torch as ml3d_torch
-import open3d.ml as ml3d
+import open3d.ml.utils as ml3d_utils
+
+from train import Trainer
 
 # DATA_DIR = '/data/'
 DATA_DIR = '/Users/m30/data/'
 
 def main():
-    # read config file
-    # config = yaml.safe_load(open(os.path.join('configs', 'pointpillars_kitti.yaml')))
+    # TODO: use hydra
     cfg_file = os.path.join('configs', 'randlanet_semantickitti.yaml')
-    cfg = ml3d.utils.Config.load_from_file(cfg_file)
+    cfg = ml3d_utils.Config.load_from_file(cfg_file)
     
     # construct a dataset by specifying dataset_path
     cfg.dataset['dataset_path'] = os.path.join(DATA_DIR, 'datasets', 'public_datasets', 'semantic_kitti')
-    dataset = ml3d_torch.datasets.SemanticKITTI(**cfg.dataset)
 
-    model = ml3d_torch.models.RandLANet(**cfg.model)
-
-    pipeline = ml3d_torch.pipelines.SemanticSegmentation(model=model, dataset=dataset, **cfg.pipeline)
-    pipeline.run_train()
-
-    print("Training and testing completed.")
-
+    semseg_trainer = Trainer(cfg)
+    semseg_trainer.train()
 
 if __name__ == "__main__":
     main()
