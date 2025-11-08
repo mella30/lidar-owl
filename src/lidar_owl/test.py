@@ -1,6 +1,6 @@
 import open3d.ml.torch as ml3d
 
-class Trainer:
+class Tester:
     def __init__(self, config: dict[str, any]):
         self.config = config  # incl model, dataset & pipeline
 
@@ -12,6 +12,6 @@ class Trainer:
             **config.pipeline,
         )
 
-    def train(self):
-        self.pipeline.run_train()
-        print("Training completed.")
+    def test(self):
+        self.pipeline.run_test()
+        print("Testing completed.")
