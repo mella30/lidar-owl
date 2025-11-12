@@ -1,5 +1,5 @@
 dataset:
-  name: SemanticKITTI
+  name: SemanticKITTIFlat
   dataset_path: /data/datasets/sample_datasets/public_datasets/semantic_kitti
   cache_dir: ./logs/cache
   class_weights: [55437630, 320797, 541736, 2578735, 3274484, 552662, 184064,
@@ -14,7 +14,7 @@ dataset:
   sampler:
     name: 'SemSegRandomSampler'
 model:
-  name: RandLANet
+  name: RandLANetFlat
   batcher: DefaultBatcher
   ckpt_path: #
   num_neighbors: 16
@@ -23,7 +23,7 @@ model:
   num_classes: 19
   ignored_label_inds: [0]
   sub_sampling_ratio: [4, 4, 4, 4]
-  in_channels: 4  # xyzi TODO: remove
+  in_channels: 3  # with (4) or without (3) intensity
   dim_features: 8
   dim_output: [16, 64, 128, 256]
   grid_size: 0.06
@@ -46,6 +46,6 @@ pipeline:
   val_batch_size: 2
   summary:
     record_for: ['train', 'val']
-    max_pts: 150000  # downsample clouds before logging to TensorBoard
-    use_reference: true  # log GT alongside predictions for visual context
-    max_outputs: 2  # number of point clouds per split
+    max_pts: 15000  # downsampling 
+    use_reference: false 
+    max_outputs: 2 

@@ -1,5 +1,4 @@
 import argparse
-import os
 
 import open3d.ml.utils as ml3d_utils
 
