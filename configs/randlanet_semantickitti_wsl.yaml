@@ -45,7 +45,7 @@ pipeline:
   train_sum_dir: ./logs/train_logs/
   val_batch_size: 2
   summary:
-    record_for: []
-    max_pts:
-    use_reference: false
-    max_outputs: 1
+    record_for: ['train', 'val']
+    max_pts: 150000  # downsample clouds before logging to TensorBoard
+    use_reference: true  # log GT alongside predictions for visual context
+    max_outputs: 2  # number of point clouds per split
