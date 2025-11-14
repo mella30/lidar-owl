@@ -31,9 +31,9 @@ model:
     recenter:
       dim: [0, 1]
 pipeline:
-  name: SemanticSegmentation
-  num_workers: 0 # known ml3d bug 
-  pin_memory: false # known ml3d bug
+  name: SemSegExt  # own pipeline wrapper (feats: bev proj visu)
+  num_workers: 0  # known ml3d bug 
+  pin_memory: false  # known ml3d bug
   optimizer:
     lr: 0.001
   batch_size: 1
@@ -48,4 +48,10 @@ pipeline:
     record_for: ['train', 'val']
     max_pts: 15000  # downsampling 
     use_reference: false 
-    max_outputs: 2 
+    max_outputs: 2
+  projection:  # TODO: refactor to general "visu" config
+    enabled: true
+    record_for: ['train', 'valid']
+    image_size: [640, 640]
+    axes: [0, 1]      # XY-top view
+    depth_axis: 2

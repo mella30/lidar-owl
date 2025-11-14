@@ -1,17 +1,8 @@
-import open3d
 import open3d.ml.torch as ml3d
 
-# dataset wrapper
-class SemanticKITTISplitFlat(open3d._ml3d.datasets.semantickitti.SemanticKITTISplit):
-    def get_data(self, idx):
-        sample = super().get_data(idx)
-        sample["feat"] = None 
-        return sample
-
-class SemanticKITTIFlat(ml3d.datasets.SemanticKITTI):
-    def get_split(self, split):
-        return SemanticKITTISplitFlat(self, split=split)
-
+from datasets import SemanticKITTIFlat
+from models import RandLANetFlat
+from pipelines import SemanticSegmentationExtended
 
 # dataset registry
 def get_dataset(name: str):
@@ -26,24 +17,6 @@ DATASET_REGISTRY = {
     "semantickittiflat": SemanticKITTIFlat,
 }
 
-
-# model wrapper 
-class RandLANetFlat(ml3d.models.RandLANet):
-    def __init__(self, *args, **kwargs):
-        kwargs = dict(kwargs)
-
-        # reset name for later calls
-        kwargs["name"] = "RandLANet"
-        super().__init__(*args, **kwargs)
-
-    def transform(self, data, attr, min_possibility_idx=None):
-        inputs = super().transform(data, attr, min_possibility_idx)
-        if isinstance(inputs, dict) and 'xyz' not in inputs:
-            coords = inputs.get('coords')
-            if coords is not None:
-                inputs['xyz'] = coords
-        return inputs
-
 # model registry
 def get_model(name: str):
     key = name.lower()
@@ -55,4 +28,17 @@ def get_model(name: str):
 
 MODEL_REGISTRY = {
     "randlanetflat": RandLANetFlat,
+}
+
+# pipeline registry
+def get_pipeline(name: str):
+    key = name.lower()
+    if key in PIPELINE_REGISTRY:  # own model
+        return PIPELINE_REGISTRY[key]
+    if hasattr(ml3d.pipelines, name):  # open3d-ml model
+        return getattr(ml3d.pipelines, name)
+    raise KeyError(f"Unknown pipeline '{name}'")
+
+PIPELINE_REGISTRY = {
+    "semsegext": SemanticSegmentationExtended,
 }
