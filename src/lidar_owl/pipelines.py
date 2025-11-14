@@ -19,6 +19,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         axes = tuple(cfg.get('axes', [0, 1]))
         depth_axis = cfg.get('depth_axis', 2)
 
+        # TODO: heuristic for which PCs to log (not random)
         for stage in stages:
             stage_summary = self.summary.get(stage, {})
             sem = stage_summary.get('semantic_segmentation')
