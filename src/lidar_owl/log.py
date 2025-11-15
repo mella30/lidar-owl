@@ -1,13 +1,25 @@
 # TODO: visu, runtime
 import numpy as np
-import colorsys
+import yaml
+from pathlib import Path
+import open3d
 
-def rgb_palette(num_classes: int):
-    # creates RGB color palette for PC visu from HSV colorsystem
+def semkitti_palette(num_classes: int) -> np.ndarray:
+    # TODO: the color mapping seems to be off - it works when I remove the "ignore label 0" in the yaml but then, the loss and mIoU is off 
+
+    # gets semantickitti colors from open3d lib 
+    resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
+    data = yaml.safe_load(resource.read_text())
+    # remap colors from preds to original semnantickitti colors
+    color_map = {
+        int(k): np.array(v[::-1], dtype=np.float32) / 255.0  # BGR -> RGB
+        for k, v in data["color_map"].items()
+    }
+    inv_map = {int(k): int(v) for k, v in data["learning_map_inv"].items()}
     palette = np.zeros((num_classes, 3), dtype=np.float32)
-    for idx in range(num_classes):
-        h = idx / max(1, num_classes)
-        palette[idx] = colorsys.hsv_to_rgb(h, 0.75, 1.0)
+    for train_id in range(num_classes):
+        raw_id = inv_map.get(train_id, 0)
+        palette[train_id] = color_map.get(raw_id, np.ones(3, dtype=np.float32))
     return palette
 
 def project(points, labels, palette, size=(512, 512), axes=(0, 1), depth_axis=2):

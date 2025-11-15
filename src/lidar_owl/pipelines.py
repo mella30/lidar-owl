@@ -7,7 +7,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         label_map = self.dataset.get_label_to_names()
-        self._palette = log.rgb_palette(len(label_map))
+        self._palette = log.semkitti_palette(len(label_map))
     
     def _log_projection_images(self, writer, epoch):
         # visualizes GT and preds per epoch

@@ -21,7 +21,7 @@ model:
   num_layers: 4
   num_points: 45056
   num_classes: 19
-  ignored_label_inds: [0]
+  ignored_label_inds: [0]  # original label IDs
   sub_sampling_ratio: [4, 4, 4, 4]
   in_channels: 3  # with (4) or without (3) intensity
   dim_features: 8
