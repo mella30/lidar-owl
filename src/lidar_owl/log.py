@@ -5,16 +5,12 @@ from pathlib import Path
 import open3d
 
 def semkitti_palette(num_classes: int) -> np.ndarray:
-    # TODO: the color mapping seems to be off - it works when I remove the "ignore label 0" in the yaml but then, the loss and mIoU is off 
-
     # gets semantickitti colors from open3d lib 
     resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
     data = yaml.safe_load(resource.read_text())
     # remap colors from preds to original semnantickitti colors
-    color_map = {
-        int(k): np.array(v[::-1], dtype=np.float32) / 255.0  # BGR -> RGB
-        for k, v in data["color_map"].items()
-    }
+    color_map = {int(k): np.array(v, dtype=np.float32) / 255.0
+                for k, v in data["color_map"].items()} 
     inv_map = {int(k): int(v) for k, v in data["learning_map_inv"].items()}
     palette = np.zeros((num_classes, 3), dtype=np.float32)
     for train_id in range(num_classes):

@@ -25,16 +25,13 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             sem = stage_summary.get('semantic_segmentation')
             if not sem:
                 continue
-            xyz = util.tensor_to_np(sem.get('vertex_positions'))
-            gt = util.tensor_to_np(sem.get('vertex_gt_labels'))
-            pred = util.tensor_to_np(sem.get('vertex_predict_labels'))
-            if xyz is None or pred is None:
-                continue
-            xyz = np.squeeze(xyz, axis=0)
-            gt = np.squeeze(gt, axis=0) if gt is not None else None
-            pred = np.squeeze(pred, axis=0)
-
-            gt_img = log.project(xyz, gt, self._palette, size, axes, depth_axis) if gt is not None else None
+        
+           # take only first sample from batched data
+            xyz = util.tensor_to_np(sem.get('vertex_positions'))[0, :, :]
+            gt = util.tensor_to_np(sem.get('vertex_gt_labels'))[0, :, :]
+            pred = util.tensor_to_np(sem.get('vertex_predict_labels'))[0, :, :]
+        
+            gt_img = log.project(xyz, gt, self._palette, size, axes, depth_axis) 
             pred_img = log.project(xyz, pred, self._palette, size, axes, depth_axis)
             if gt_img is not None:
                 writer.add_image(f"{stage}/projection_gt",
