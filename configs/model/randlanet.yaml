@@ -1,0 +1,16 @@
+name: RandLANetFlat  # TODO: define separate config for hierarchical version
+batcher: DefaultBatcher
+ckpt_path: null  # TODO: has to be set for eval-only
+num_neighbors: 16
+num_layers: 4
+num_points: 45056
+num_classes: 19  # TODO: dataset dependent
+ignored_label_inds: [0]
+sub_sampling_ratio: [4, 4, 4, 4]
+in_channels: 3  # never train on intensity
+dim_features: 8
+dim_output: [16, 64, 128, 256]  # TODO: needs to be overridden for metric learning
+grid_size: 0.06
+augment:
+  recenter:
+    dim: [0, 1]
