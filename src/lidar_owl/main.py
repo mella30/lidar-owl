@@ -15,7 +15,7 @@ def main(cfg: DictConfig):
     if cfg.get("debug"):
         cfg.dataset.training_split = ['08']
         cfg.dataset.validation_split = ['08']
-        cfg.pipeline.max_epoch = 10
+        cfg.pipeline.max_epoch = 25
 
     # TODO: checkpoint should never be loaded for train! for eval, open3d default (last one) is fine
     if cfg.mode in ("train_eval", "train+eval", "both"):
