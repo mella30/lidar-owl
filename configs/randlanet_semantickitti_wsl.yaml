@@ -1,50 +1,27 @@
 dataset:
   name: SemanticKITTIFlat
   dataset_path: /data/datasets/sample_datasets/public_datasets/semantic_kitti
-  cache_dir: ./logs/cache
+  cache_dir: ./logs/cache  # uses dataset cache if path is given
   class_weights: [55437630, 320797, 541736, 2578735, 3274484, 552662, 184064,
     78858, 240942562, 17294618, 170599734, 6369672, 230413074, 101130274,
-    476491114, 9833174, 129609852, 4506626, 1168181]
-  test_result_folder: ./test
-  test_split: ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
-  # training_split: ['00', '01', '02', '03', '04', '05', '06', '07', '09', '10']
-  all_split: ['00', '01', '02', '03', '04', '05', '06', '07', '09', '08', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
-  training__split: ['08']
-  validation_split: ['08']
-  use_cache: true
-  sampler:
-    name: 'SemSegRandomSampler'
+    476491114, 9833174, 129609852, 4506626, 1168181]  # TODO: class weighting strategy
 model:
   name: RandLANetFlat
-  batcher: DefaultBatcher
   ckpt_path: #
-  num_neighbors: 16
-  num_layers: 4
-  num_points: 45056
-  num_classes: 19
-  ignored_label_inds: [0]  # original label IDs
-  sub_sampling_ratio: [4, 4, 4, 4]
-  in_channels: 3  # with (4) or without (3) intensity
-  dim_features: 8
-  dim_output: [16, 64, 128, 256]
-  grid_size: 0.06
-  augment:
-    recenter:
-      dim: [0, 1]
+  ignored_label_inds: [0]  # original label IDs  # TODO: map to train labels in loss functions
+  dim_output: [16, 64, 128, 256]  # TODO: define feature space
 pipeline:
   name: SemSegExt
-  num_workers: 0  # known ml3d bug 
-  pin_memory: false  # known ml3d bug
-  optimizer:
+  # TODO: default optimizer, LR and scheduler!
+  optimizer:  
     lr: 0.001
-  batch_size: 5
-  main_log_dir: ./logs
+  scheduler_gamma: 0.9886
+  batch_size: 2
+  val_batch_size: 2
+  train_sum_dir: ./logs/train_logs/
   max_epoch: 100
   save_ckpt_freq: 5
-  scheduler_gamma: 0.9886
-  test_batch_size: 1
-  train_sum_dir: ./logs/train_logs/
-  val_batch_size: 2
+  # TODO: refactor config of evals, logging and visualization (find solution for final result visu)
   summary:
     record_for: ['train', 'val']
     max_pts: 15000  # downsampling 

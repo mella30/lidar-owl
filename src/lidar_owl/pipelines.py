@@ -16,7 +16,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             return
         stages = cfg.get('record_for', list(self.summary.keys()))
         size = tuple(cfg.get('image_size', [512, 512]))
-        axes = tuple(cfg.get('axes', [0, 1]))
+        axes = tuple(cfg.get('axes', [0, 1])) 
         depth_axis = cfg.get('depth_axis', 2)
 
         # TODO: heuristic for which PCs to log (not random)
