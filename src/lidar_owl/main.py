@@ -1,13 +1,12 @@
 import hydra
-import open3d as o3d
-import omegaconf as OC
+from omegaconf import OmegaConf, DictConfig
 
-from train import Trainer
-from eval import Evaluator
-
+from ml3d_util import get_model, get_dataset
+from pipelines import SemanticSegmentationExtended
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
-def main(cfg: OC.DictConfig):
+def main(cfg: DictConfig):
+
     # compact debug setup
     if cfg.get("debug"):
         cfg.dataset.training_split = ['08']
@@ -15,16 +14,19 @@ def main(cfg: OC.DictConfig):
         cfg.pipeline.max_epoch = 25
         cfg.pipeline.save_ckpt_freq = 0
 
+    # set up model, dataset and semseg pipeline
+    # config = OmegaConf.to_container(cfg)
+    model = get_model(cfg.get("model", {}).get("name", {}))(**cfg.model)
+    dataset = get_dataset(cfg.get("dataset", {}).get("name", {}))(**cfg.dataset)
+    pipeline = SemanticSegmentationExtended(model, dataset, **cfg.pipeline)
+
     if cfg.mode == "train+eval":
-        semseg_trainer = Trainer(cfg)
-        semseg_trainer.train()
-        semseg_trainer.pipeline.run_test()
+        pipeline.run_train()
+        pipeline.run_test()
     elif cfg.mode == "train":
-        semseg_trainer = Trainer(cfg)
-        semseg_trainer.train()
+        pipeline.run_train()
     elif cfg.mode == "eval":
-        semseg_evaluator = Evaluator(cfg)
-        semseg_evaluator.eval()
+        pipeline.run_test() 
     else:
         raise ValueError(f"Unknown mode '{cfg.mode}'")
 

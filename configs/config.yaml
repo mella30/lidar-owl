@@ -1,11 +1,13 @@
+# config files
 defaults:
   - dataset: semantickitti_mac
   - model: randlanet
   - pipeline: semseg_ext
   - _self_
 
-mode: train  # train+eval (default) | train | eval
-debug: false
+# run args
+mode: train  # train+eval | train | eval
+debug: false  # runs compact debug setup
 
 hydra:
   run:

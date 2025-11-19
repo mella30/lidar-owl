@@ -1,4 +1,5 @@
 name: SemSegExt
+# TODO: global optimizer config
 optimizer:
   lr: 0.001
 scheduler_gamma: 0.9886
@@ -8,7 +9,8 @@ test_batch_size: 1
 train_sum_dir: ./logs/train_logs/
 main_log_dir: ./logs
 max_epoch: 100
-save_ckpt_freq: 5
+save_ckpt_freq: 10
+# TODO: global log / visu config
 summary:
   record_for: ['train', 'val']
   max_pts: 15000  # downsampling 
@@ -20,5 +22,6 @@ projection:
   image_size: [640, 640]
   axes: [0, 1]      # XY-top view
   depth_axis: 2
+# known open3d ml bugs
 num_workers: 0
 pin_memory: false

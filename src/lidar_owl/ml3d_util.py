@@ -29,16 +29,3 @@ def get_model(name: str):
 MODEL_REGISTRY = {
     "randlanetflat": RandLANetFlat,
 }
-
-# pipeline registry
-def get_pipeline(name: str):
-    key = name.lower()
-    if key in PIPELINE_REGISTRY:  # own model
-        return PIPELINE_REGISTRY[key]
-    if hasattr(ml3d.pipelines, name):  # open3d-ml model
-        return getattr(ml3d.pipelines, name)
-    raise KeyError(f"Unknown pipeline '{name}'")
-
-PIPELINE_REGISTRY = {
-    "semsegext": SemanticSegmentationExtended,
-}

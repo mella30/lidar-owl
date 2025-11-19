@@ -1,5 +1,4 @@
 # semseg pipeline wrapper for various modifications
-import numpy as np
 import open3d.ml.torch as ml3d
 import log, util
 
@@ -8,6 +7,8 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         super().__init__(*args, **kwargs)
         label_map = self.dataset.get_label_to_names()
         self._palette = log.semkitti_palette(len(label_map))
+        self._save_only_final = False
+        self._original_ckpt_freq = None
     
     def _log_projection_images(self, writer, epoch):
         # visualizes GT and preds per epoch
@@ -43,3 +44,27 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def save_logs(self, writer, epoch):
         self._log_projection_images(writer, epoch)
         super().save_logs(writer, epoch)
+
+    def save_ckpt(self, epoch):
+        if self._save_only_final:
+            max_epoch = getattr(self.cfg, "max_epoch", epoch)
+            if epoch != max_epoch:
+                return
+        return super().save_ckpt(epoch)
+
+    def run_train(self):
+        self._original_ckpt_freq = getattr(self.cfg, "save_ckpt_freq", None)
+        self._save_only_final = (self._original_ckpt_freq is None) or (self._original_ckpt_freq <= 0)
+        if self._save_only_final:
+            self.cfg.save_ckpt_freq = 1
+        try:
+            return super().run_train()
+        finally:
+            if self._save_only_final:
+                self.cfg.save_ckpt_freq = self._original_ckpt_freq
+                self._save_only_final = False
+
+    def run_test(self, *args, **kwargs):
+        return super().run_test(*args, **kwargs)
+
+

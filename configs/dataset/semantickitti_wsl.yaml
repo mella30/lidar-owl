@@ -2,13 +2,13 @@ name: SemanticKITTIFlat
 dataset_path: /data/datasets/sample_datasets/public_datasets/semantic_kitti
 cache_dir: ./logs/cache
 use_cache: true
-sampler:
-  name: SemSegRandomSampler
+# sampler:
+#   name: SemSegRandomSampler
 
 training_split: ['00', '01', '02', '03', '04', '05', '06', '07', '09', '10']
 validation_split: ['08']
-test_split: ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
-all_split: ['00', '01', '02', '03', '04', '05', '06', '07', '09', '08', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
+test_split: ['08']  # real test data missing
+# all_split: ['00', '01', '02', '03', '04', '05', '06', '07', '09', '08', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
 
 class_weights: [55437630, 320797, 541736, 2578735, 3274484, 552662, 184064,
   78858, 240942562, 17294618, 170599734, 6369672, 230413074, 101130274,

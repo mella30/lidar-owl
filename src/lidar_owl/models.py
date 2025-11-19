@@ -4,12 +4,16 @@
 # TODO: anomaly models
 
 import open3d.ml.torch as ml3d
+from omegaconf import OmegaConf
 
 # open3d-ml model wrapper
 class RandLANetFlat(ml3d.models.RandLANet):
     def __init__(self, *args, **kwargs):
         kwargs = dict(kwargs)
-
+        # ensure augment block is a plain dict (Open3D mutates it)
+        augment_cfg = kwargs.get("augment")
+        if augment_cfg is not None:
+            kwargs["augment"] = OmegaConf.to_container(augment_cfg, resolve=True)
         # reset name for later calls
         kwargs["name"] = "RandLANet"
         super().__init__(*args, **kwargs)
