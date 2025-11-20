@@ -1,12 +1,12 @@
 # config files
 defaults:
-  - dataset: semantickitti_mac
+  - dataset: semantickitti
   - model: randlanet
   - pipeline: semseg_ext
   - _self_
 
 # run args
-mode: train  # train+eval | train | eval
+mode: train+eval  # train+eval | train | eval
 debug: false  # runs compact debug setup
 clean: false  # cleans logs of old runs (ckpts & stdout)
 

@@ -1,4 +1,7 @@
 name: SemSegExt
+# known open3d ml bugs
+num_workers: 0
+pin_memory: false
 # TODO: global optimizer config
 optimizer:
   lr: 0.001
@@ -22,6 +25,4 @@ projection:
   image_size: [640, 640]
   axes: [0, 1]      # XY-top view
   depth_axis: 2
-# known open3d ml bugs
-num_workers: 0
-pin_memory: false
+
