@@ -20,8 +20,6 @@ def main(cfg: DictConfig):
     if cfg.get("debug"):
         cfg.dataset.training_split = ['08']
         cfg.dataset.validation_split = ['08']
-        cfg.pipeline.max_epoch = 25
-        cfg.pipeline.save_ckpt_freq = 0
 
     model_name = cfg.get("model", {}).get("name", {})
     dataset_name = cfg.get("dataset", {}).get("name", {})

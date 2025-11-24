@@ -4,7 +4,9 @@ import yaml
 from pathlib import Path
 import open3d
 
-def semkitti_palette(num_classes: int) -> np.ndarray:
+import util
+
+def semkitti_cmap(num_classes: int) -> np.ndarray:
     # gets semantickitti colors from open3d lib 
     resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
     data = yaml.safe_load(resource.read_text())
@@ -17,6 +19,25 @@ def semkitti_palette(num_classes: int) -> np.ndarray:
         raw_id = inv_map.get(train_id, 0)
         palette[train_id] = color_map.get(raw_id, np.ones(3, dtype=np.float32))
     return palette
+
+def semkitti_train_id_to_name(num_classes: int) -> list[str]:
+    """Map train IDs (after learning_map) to human readable SemanticKITTI names."""
+    resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
+    data = yaml.safe_load(resource.read_text())
+    inv_map = {int(k): int(v) for k, v in data["learning_map_inv"].items()}
+    labels = {int(k): v for k, v in data["labels"].items()}
+    names = []
+    for train_id in range(num_classes):
+        raw_id = inv_map.get(train_id, -1)
+        names.append(labels.get(raw_id, f"raw_{raw_id}"))
+    return names
+
+def label_names_from_dataset(dataset, num_classes: int) -> list[str]:
+    """Prefer dataset-provided label_to_names (train IDs); fallback to SemanticKITTI mapping."""
+    names_map = getattr(dataset, "label_to_names", None)
+    if isinstance(names_map, dict) and names_map:
+        return [names_map.get(i, f"class_{i}") for i in range(num_classes)]
+    return semkitti_train_id_to_name(num_classes)
 
 def project(points, labels, palette, size=(512, 512), axes=(0, 1), depth_axis=2):
     # BEV projection -> TODO: sensor view projection?
@@ -42,3 +63,34 @@ def project(points, labels, palette, size=(512, 512), axes=(0, 1), depth_axis=2)
             zbuf[y, x] = z
             canvas[y, x] = palette[label]
     return canvas
+
+def log_projection_images(epoch, summary, cfg, palette, writer):
+    # TODO: clean that mess up..
+    # visualizes GT and preds per epoch
+    if not cfg.get('enabled', True):
+        return
+    stages = cfg.get('record_for', list(summary.keys()))
+    size = tuple(cfg.get('image_size', [512, 512]))
+    axes = tuple(cfg.get('axes', [0, 1])) 
+    depth_axis = cfg.get('depth_axis', 2)
+
+    # TODO: heuristic for which PCs to log (not random)
+    for stage in stages:
+        stage_summary = summary.get(stage, {})
+        sem = stage_summary.get('semantic_segmentation')
+        if not sem:
+            continue
+    
+        # take only first sample from batched data
+        xyz = util.tensor_to_np(sem.get('vertex_positions'))[0, :, :]
+        gt = util.tensor_to_np(sem.get('vertex_gt_labels'))[0, :, :]
+        pred = util.tensor_to_np(sem.get('vertex_predict_labels'))[0, :, :]
+    
+        gt_img = project(xyz, gt, palette, size, axes, depth_axis) 
+        pred_img = project(xyz, pred, palette, size, axes, depth_axis)
+        if gt_img is not None:
+            writer.add_image(f"{stage}/projection_gt",
+                                gt_img.transpose(2, 0, 1), epoch)
+        if pred_img is not None:
+            writer.add_image(f"{stage}/projection_pred",
+                                pred_img.transpose(2, 0, 1), epoch)

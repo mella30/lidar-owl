@@ -21,7 +21,7 @@ summary:
   max_outputs: 2
 projection:
   enabled: true
-  record_for: ['train', 'valid']
+  record_for: ['train', 'val']
   image_size: [640, 640]
   axes: [0, 1]      # XY-top view
   depth_axis: 2

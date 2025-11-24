@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 class RandLANetFlat(ml3d.models.RandLANet):
     def __init__(self, *args, **kwargs):
         kwargs = dict(kwargs)
+        # TODO: still, a random crop of the PC is selected for train & eval. that should NOT be the case!
         # ensure augment block is a plain dict (Open3D mutates it)
         augment_cfg = kwargs.get("augment")
         if augment_cfg is not None:

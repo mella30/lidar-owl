@@ -1,7 +1,7 @@
 name: RandLANetFlat  # TODO: define separate config for hierarchical version
 ckpt_path: null  # TODO: has to be set for eval-only
 num_classes: 19  # TODO: dataset dependent
-ignored_label_inds: [0]
+ignored_label_inds: [0]  # original IDs (0 = unlabeled)
 in_channels: 3  # never train on intensity
 dim_output: [16, 64, 128, 256]  # TODO: needs to be overridden for metric learning
 augment:

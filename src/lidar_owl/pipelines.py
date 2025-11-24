@@ -1,70 +1,66 @@
 # semseg pipeline wrapper for various modifications
+import numpy as np
 import open3d.ml.torch as ml3d
-import log, util
+import log
+
 
 class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        label_map = self.dataset.get_label_to_names()
-        self._palette = log.semkitti_palette(len(label_map))
-        self._save_only_final = False
-        self._original_ckpt_freq = None
-    
-    def _log_projection_images(self, writer, epoch):
-        # visualizes GT and preds per epoch
-        cfg = self.cfg.get('projection', {})
-        if not cfg.get('enabled', True):
-            return
-        stages = cfg.get('record_for', list(self.summary.keys()))
-        size = tuple(cfg.get('image_size', [512, 512]))
-        axes = tuple(cfg.get('axes', [0, 1])) 
-        depth_axis = cfg.get('depth_axis', 2)
 
-        # TODO: heuristic for which PCs to log (not random)
-        for stage in stages:
-            stage_summary = self.summary.get(stage, {})
-            sem = stage_summary.get('semantic_segmentation')
-            if not sem:
-                continue
-        
-           # take only first sample from batched data
-            xyz = util.tensor_to_np(sem.get('vertex_positions'))[0, :, :]
-            gt = util.tensor_to_np(sem.get('vertex_gt_labels'))[0, :, :]
-            pred = util.tensor_to_np(sem.get('vertex_predict_labels'))[0, :, :]
-        
-            gt_img = log.project(xyz, gt, self._palette, size, axes, depth_axis) 
-            pred_img = log.project(xyz, pred, self._palette, size, axes, depth_axis)
-            if gt_img is not None:
-                writer.add_image(f"{stage}/projection_gt",
-                                 gt_img.transpose(2, 0, 1), epoch)
-            if pred_img is not None:
-                writer.add_image(f"{stage}/projection_pred",
-                                 pred_img.transpose(2, 0, 1), epoch)
+        # color palette for visu
+        self.color_map = log.semkitti_cmap(self.dataset.num_classes)  # TODO: depends on dataset!
 
     def save_logs(self, writer, epoch):
-        self._log_projection_images(writer, epoch)
+        # visu parameters
+        visu_cfg = self.cfg.get('projection', {})
+        # BEV images
+        log.log_projection_images(epoch, self.summary, visu_cfg, self.color_map, writer)
+
+        # class frequency summary (train IDs + mapped names)
+        stage = "train"
+        summary = self.summary.get(stage, {}).get("semantic_segmentation")
+        if summary:
+            num_classes = self.dataset.num_classes
+            names = log.label_names_from_dataset(self.dataset, num_classes)
+
+            preds = summary.get("vertex_predict_labels")
+            if preds is not None:
+                preds_np = np.asarray(preds).reshape(-1)
+                counts_pred = np.bincount(preds_np, minlength=num_classes)
+                lines_pred = [f"{i:02d} {names[i]}: {int(c)}" for i, c in enumerate(counts_pred) if c > 0]
+                if lines_pred:
+                    writer.add_text(f"{stage}/pred_class_hist", "\n".join(lines_pred), epoch)
+
+            gt = summary.get("vertex_gt_labels")
+            if gt is not None:
+                gt_np = np.asarray(gt).reshape(-1)
+                counts_gt = np.bincount(gt_np, minlength=num_classes)
+                lines_gt = [f"{i:02d} {names[i]}: {int(c)}" for i, c in enumerate(counts_gt) if c > 0]
+                if lines_gt:
+                    writer.add_text(f"{stage}/gt_class_hist", "\n".join(lines_gt), epoch)
+
+        # TODO: log calibration metrics
+
+        # standard logs
         super().save_logs(writer, epoch)
 
-    def save_ckpt(self, epoch):
-        if self._save_only_final:
-            max_epoch = getattr(self.cfg, "max_epoch", epoch)
-            if epoch != max_epoch:
-                return
-        return super().save_ckpt(epoch)
-
     def run_train(self):
-        self._original_ckpt_freq = getattr(self.cfg, "save_ckpt_freq", None)
-        self._save_only_final = (self._original_ckpt_freq is None) or (self._original_ckpt_freq <= 0)
-        if self._save_only_final:
-            self.cfg.save_ckpt_freq = 1
-        try:
-            return super().run_train()
-        finally:
-            if self._save_only_final:
-                self.cfg.save_ckpt_freq = self._original_ckpt_freq
-                self._save_only_final = False
+        return super().run_train()
 
     def run_test(self, *args, **kwargs):
-        return super().run_test(*args, **kwargs)
+        # Optionally return predictions and confidences from evaluation
+        return_outputs = kwargs.pop("return_outputs", False)
+        super().run_test(*args, **kwargs)
+        if not return_outputs:
+            return
 
-
+        outputs = []
+        for labels, scores in zip(self.ori_test_labels, self.ori_test_probs):
+            scores_np = np.asarray(scores)
+            outputs.append({
+                "predict_labels": np.asarray(labels),
+                "predict_scores": scores_np,
+                "predict_confidences": scores_np.max(axis=1),
+            })
+        return outputs
