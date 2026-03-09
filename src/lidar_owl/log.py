@@ -4,7 +4,7 @@ import yaml
 from pathlib import Path
 import open3d
 
-import util
+import lidar_owl.util as util
 
 def semkitti_cmap(num_classes: int) -> np.ndarray:
     # gets semantickitti colors from open3d lib 

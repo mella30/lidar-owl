@@ -5,7 +5,8 @@
 
 import open3d.ml.torch as ml3d
 from omegaconf import OmegaConf
-from losses import resolve_loss
+
+from lidar_owl.losses import resolve_loss
 
 # open3d-ml model wrapper
 class RandLANetFlat(ml3d.models.RandLANet):

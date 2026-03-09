@@ -1,8 +1,8 @@
 # semseg pipeline wrapper for various modifications
 import numpy as np
 import open3d.ml.torch as ml3d
-import log
 
+import lidar_owl.log as log
 
 class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def __init__(self, *args, **kwargs):

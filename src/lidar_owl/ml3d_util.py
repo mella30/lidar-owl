@@ -1,8 +1,7 @@
 import open3d.ml.torch as ml3d
 
-from datasets import SemanticKITTIFlat
-from models import RandLANetFlat
-from pipelines import SemanticSegmentationExtended
+from lidar_owl.datasets import SemanticKITTIFlat
+from lidar_owl.models import RandLANetFlat
 
 # dataset registry
 def resolve_dataset(name: str):

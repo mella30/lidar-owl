@@ -3,8 +3,8 @@ from omegaconf import DictConfig
 from pathlib import Path
 import shutil
 
-from ml3d_util import resolve_model, resolve_dataset
-from pipelines import SemanticSegmentationExtended
+from lidar_owl.ml3d_util import resolve_model, resolve_dataset
+from lidar_owl.pipelines import SemanticSegmentationExtended
 
 def _clean_checkpoints(cfg: DictConfig, model_name, dataset_name):
     main_log_dir = Path(cfg.pipeline.get("main_log_dir", "./logs"))

@@ -5,8 +5,6 @@
 import open3d
 import open3d.ml.torch as ml3d
 
-from omegaconf import OmegaConf as OC
-
 # open3d-ml dataset wrapper
 class SemanticKITTISplitFlat(open3d._ml3d.datasets.semantickitti.SemanticKITTISplit):
     def get_data(self, idx):
