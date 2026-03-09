@@ -5,6 +5,7 @@
 
 import open3d.ml.torch as ml3d
 from omegaconf import OmegaConf
+from losses import resolve_loss
 
 # open3d-ml model wrapper
 class RandLANetFlat(ml3d.models.RandLANet):
@@ -17,6 +18,12 @@ class RandLANetFlat(ml3d.models.RandLANet):
             kwargs["augment"] = OmegaConf.to_container(augment_cfg, resolve=True)
         # reset name for later calls
         kwargs["name"] = "RandLANet"
+
+        # resolve configured loss before Open3D model init
+        resolved_loss = resolve_loss(kwargs.get("loss"))
+        if resolved_loss is not None:
+            kwargs["loss"] = resolved_loss
+
         super().__init__(*args, **kwargs)
 
     def transform(self, data, attr, min_possibility_idx=None):

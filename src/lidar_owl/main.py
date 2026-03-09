@@ -3,7 +3,7 @@ from omegaconf import DictConfig
 from pathlib import Path
 import shutil
 
-from ml3d_util import get_model, get_dataset
+from ml3d_util import resolve_model, resolve_dataset
 from pipelines import SemanticSegmentationExtended
 
 def _clean_checkpoints(cfg: DictConfig, model_name, dataset_name):
@@ -27,8 +27,8 @@ def main(cfg: DictConfig):
         _clean_checkpoints(cfg, model_name, dataset_name)
     
     # set up model, dataset and pipeline
-    model = get_model(model_name)(**cfg.model)
-    dataset = get_dataset(dataset_name)(**cfg.dataset)
+    model = resolve_model(model_name)(**cfg.model)
+    dataset = resolve_dataset(dataset_name)(**cfg.dataset)
     pipeline = SemanticSegmentationExtended(model, dataset, **cfg.pipeline)
 
     if cfg.mode == "train+eval":

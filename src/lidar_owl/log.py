@@ -43,7 +43,7 @@ def project(points, labels, palette, size=(512, 512), axes=(0, 1), depth_axis=2)
     # BEV projection -> TODO: sensor view projection?
     if points.size == 0 or labels is None:
         return None
-    mask = (labels >= 0).squeeze()
+    mask = (labels > 0).squeeze()
     pts = points[mask, :]
     lbs = labels[mask, :]
     if pts.size == 0:

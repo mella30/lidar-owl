@@ -5,7 +5,7 @@ from models import RandLANetFlat
 from pipelines import SemanticSegmentationExtended
 
 # dataset registry
-def get_dataset(name: str):
+def resolve_dataset(name: str):
     key = name.lower()
     if key in DATASET_REGISTRY:  # own dataset
         return DATASET_REGISTRY[key]
@@ -18,7 +18,7 @@ DATASET_REGISTRY = {
 }
 
 # model registry
-def get_model(name: str):
+def resolve_model(name: str):
     key = name.lower()
     if key in MODEL_REGISTRY:  # own model
         return MODEL_REGISTRY[key]
