@@ -1,4 +1,4 @@
-# LiDAR-OWL (open world learning) — PhD Monorepo by M30
+# LiDAR-OWL (open world learning) - PhD Monorepo by M30
 
 This repository is the monorepo for my dissertation and builds on Open3D-ML. It contains benchmarks, implementations and configurations for (hierarchical) LiDAR semantic segmentation, uncertainty estimation and anomaly/novelty detection.
 
