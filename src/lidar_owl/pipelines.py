@@ -14,20 +14,29 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def save_logs(self, writer, epoch):
         # visu parameters
         visu_cfg = self.cfg.get('projection', {})
+        ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", [])
+        dataset_num_classes = self.dataset.num_classes
+
         # BEV images
-        log.log_projection_images(epoch, self.summary, visu_cfg, self.color_map, writer)
+        log.log_projection_images(
+            epoch,
+            self.summary,
+            visu_cfg,
+            self.color_map,
+            writer,
+            ignored_label_inds=ignored_label_inds,
+        )
 
         # class frequency summary (train IDs + mapped names)
         stage = "train"
         summary = self.summary.get(stage, {}).get("semantic_segmentation")
         if summary:
-            num_classes = self.dataset.num_classes
-            names = log.label_names_from_dataset(self.dataset, num_classes)
+            names = log.label_names_from_dataset(self.dataset, dataset_num_classes)
 
             preds = summary.get("vertex_predict_labels")
             if preds is not None:
-                preds_np = np.asarray(preds).reshape(-1)
-                counts_pred = np.bincount(preds_np, minlength=num_classes)
+                preds_np = log.restore_prediction_labels(preds, ignored_label_inds).reshape(-1)
+                counts_pred = np.bincount(preds_np, minlength=dataset_num_classes)
                 lines_pred = [f"{i:02d} {names[i]}: {int(c)}" for i, c in enumerate(counts_pred) if c > 0]
                 if lines_pred:
                     writer.add_text(f"{stage}/pred_class_hist", "\n".join(lines_pred), epoch)
@@ -35,7 +44,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             gt = summary.get("vertex_gt_labels")
             if gt is not None:
                 gt_np = np.asarray(gt).reshape(-1)
-                counts_gt = np.bincount(gt_np, minlength=num_classes)
+                counts_gt = np.bincount(gt_np, minlength=dataset_num_classes)
                 lines_gt = [f"{i:02d} {names[i]}: {int(c)}" for i, c in enumerate(counts_gt) if c > 0]
                 if lines_gt:
                     writer.add_text(f"{stage}/gt_class_hist", "\n".join(lines_gt), epoch)

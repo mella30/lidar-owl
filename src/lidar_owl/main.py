@@ -12,14 +12,14 @@ def _clean_checkpoints(cfg: DictConfig, model_name, dataset_name):
     if target_dir.exists():
         shutil.rmtree(target_dir)
         print(f"[clean] removed existing log dir: {target_dir}")
+    cache_dir = Path(cfg.dataset.get("cache_dir", "./logs/cache"))
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir)
+        print(f"[clean] removed cache dir: {cache_dir}")
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def main(cfg: DictConfig):
 
-    # compact debug setup
-    if cfg.get("debug"):
-        cfg.dataset.training_split = ['08']
-        cfg.dataset.validation_split = ['08']
 
     model_name = cfg.get("model", {}).get("name", {})
     dataset_name = cfg.get("dataset", {}).get("name", {})
