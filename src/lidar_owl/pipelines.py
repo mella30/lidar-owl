@@ -8,6 +8,8 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # TODO: implement early stopping
+
         # color palette for visu
         self.color_map = log.semkitti_cmap(self.dataset.num_classes)  # TODO: depends on dataset!
 

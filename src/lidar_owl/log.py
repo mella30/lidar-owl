@@ -92,6 +92,7 @@ def project(points, labels, palette, size=(512, 512), axes=(0, 1), depth_axis=2,
 
 def log_projection_images(epoch, summary, cfg, palette, writer, ignored_label_inds=()):
     # TODO: clean that mess up..
+    # TODO: currently only works for train (does not log val or test, but should)
     # visualizes GT and preds per epoch
     if not cfg.get('enabled', True):
         return

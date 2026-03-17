@@ -30,14 +30,15 @@ def main(cfg: DictConfig):
     model = resolve_model(model_name)(**cfg.model)
     dataset = resolve_dataset(dataset_name)(**cfg.dataset)
     pipeline = SemanticSegmentationExtended(model, dataset, **cfg.pipeline)
+    return_outputs = cfg.pipeline.get("return_outputs", False)
 
-    if cfg.mode == "train+eval":
+    if cfg.mode == "train+test":
         pipeline.run_train()
-        pipeline.run_test()
+        return pipeline.run_test(return_outputs=return_outputs)
     elif cfg.mode == "train":
         pipeline.run_train()
-    elif cfg.mode == "eval":
-        pipeline.run_test() 
+    elif cfg.mode == "test":
+        return pipeline.run_test(return_outputs=return_outputs)
     else:
         raise ValueError(f"Unknown mode '{cfg.mode}'")
 
