@@ -1,7 +1,6 @@
 # semseg pipeline wrapper for various modifications
 import numpy as np
 import open3d.ml.torch as ml3d
-import torch
 
 import lidar_owl.log as log
 
@@ -12,13 +11,22 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         # color palette for visu
         self.color_map = log.semkitti_cmap(self.dataset.num_classes)  # TODO: depends on dataset!
 
+    def _get_metric_obj(self, stage):
+        # helper function to access stage metrics
+        if stage == "train":
+            return getattr(self, "metric_train", None)
+        if stage == "val":
+            return getattr(self, "metric_val", None)
+        if stage == "test":
+            return getattr(self, "metric_test", None)
+        return None
+
     def save_logs(self, writer, epoch):
-        # visu parameters
+        # train logger only (BEV visu extension for sanity-checking)
         visu_cfg = self.cfg.get('projection', {})
-        ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", [])
-        dataset_num_classes = self.dataset.num_classes
 
         # BEV images
+        ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", [])
         log.log_projection_images(
             epoch,
             self.summary,
@@ -28,32 +36,10 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             ignored_label_inds=ignored_label_inds,
         )
 
-        # for stage in ("train", "valid", "test"):
-        #     summary = self.summary.get(stage, {}).get("semantic_segmentation")
-        #     if not summary:
-        #         continue
-
-        #     preds = summary.get("vertex_predict_labels")
-        #     gt = summary.get("vertex_gt_labels")
-        #     if preds is None or gt is None:
-        #         continue
-
-        #     names = log.label_names_from_dataset(self.dataset, dataset_num_classes)
-        #     preds_np = log.restore_prediction_labels(preds, ignored_label_inds).reshape(-1)
-        #     gt_np = np.asarray(gt).reshape(-1)
-
-        #     preds_t = torch.as_tensor(preds_np, dtype=torch.long)
-        #     gt_t = torch.as_tensor(gt_np, dtype=torch.long)
-
-        # TODO: log performance / calibration metrics
-
         # standard logs
         super().save_logs(writer, epoch)
 
-    def run_train(self):
-        return super().run_train()
-
-    def run_test(self, *args, **kwargs):
+    def run_test(self, *args, **kwargs):  # / TODO: see also update_tests
         # Optionally return predictions and confidences from evaluation
         return_outputs = kwargs.pop("return_outputs", False)
         super().run_test(*args, **kwargs)
@@ -68,4 +54,10 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
                 "predict_scores": scores_np,
                 "predict_confidences": scores_np.max(axis=1),
             })
+
+        # TODO: log calibration metrics & 3d visu
+
         return outputs
+    
+
+    # also available: run_train, run_inference (preds only) / get_3d_summary()
