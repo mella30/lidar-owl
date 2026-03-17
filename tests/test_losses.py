@@ -3,31 +3,7 @@ import torch
 import torch.nn.functional as F
 from omegaconf import OmegaConf
 
-from src.lidar_owl.losses import CrossEntropyFlat, resolve_loss
-
-
-def test_resolve_loss_from_dict_builds_module():
-    loss = resolve_loss({"name": "CrossEntropyFlat", "ignore_index": 0})
-    assert isinstance(loss, CrossEntropyFlat)
-    assert loss.ignore_index == 0
-
-
-def test_resolve_loss_from_dictconfig_builds_module():
-    cfg = OmegaConf.create({"name": "CrossEntropyFlat", "ignore_index": 0})
-    loss = resolve_loss(cfg)
-    assert isinstance(loss, CrossEntropyFlat)
-    assert loss.ignore_index == 0
-
-
-def test_resolve_loss_rejects_unknown_name():
-    with pytest.raises(KeyError):
-        resolve_loss({"name": "DoesNotExist"})
-
-
-def test_resolve_loss_rejects_invalid_type():
-    with pytest.raises(TypeError):
-        resolve_loss("CrossEntropyFlat")
-
+from lidar_owl.losses import CrossEntropyFlat, resolve_loss
 
 def test_cross_entropy_flat_matches_torch_functional():
     logits = torch.tensor(

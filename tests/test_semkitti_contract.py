@@ -8,14 +8,14 @@ from pathlib import Path
 open3d = pytest.importorskip("open3d")
 assert open3d is not None
 
-from src.lidar_owl.log import (
+from lidar_owl.log import (
     compact_label_names_from_dataset,
     project,
     restore_prediction_labels,
     semkitti_cmap,
     semkitti_train_id_to_name,
 )
-from src.lidar_owl.losses import CrossEntropyFlat
+from lidar_owl.losses import CrossEntropyFlat
 
 
 def _semkitti_resource():

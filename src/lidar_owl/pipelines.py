@@ -1,6 +1,7 @@
 # semseg pipeline wrapper for various modifications
 import numpy as np
 import open3d.ml.torch as ml3d
+import torch
 
 import lidar_owl.log as log
 
@@ -27,29 +28,24 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             ignored_label_inds=ignored_label_inds,
         )
 
-        # class frequency summary (train IDs + mapped names)
-        stage = "train"
-        summary = self.summary.get(stage, {}).get("semantic_segmentation")
-        if summary:
-            names = log.label_names_from_dataset(self.dataset, dataset_num_classes)
+        # for stage in ("train", "valid", "test"):
+        #     summary = self.summary.get(stage, {}).get("semantic_segmentation")
+        #     if not summary:
+        #         continue
 
-            preds = summary.get("vertex_predict_labels")
-            if preds is not None:
-                preds_np = log.restore_prediction_labels(preds, ignored_label_inds).reshape(-1)
-                counts_pred = np.bincount(preds_np, minlength=dataset_num_classes)
-                lines_pred = [f"{i:02d} {names[i]}: {int(c)}" for i, c in enumerate(counts_pred) if c > 0]
-                if lines_pred:
-                    writer.add_text(f"{stage}/pred_class_hist", "\n".join(lines_pred), epoch)
+        #     preds = summary.get("vertex_predict_labels")
+        #     gt = summary.get("vertex_gt_labels")
+        #     if preds is None or gt is None:
+        #         continue
 
-            gt = summary.get("vertex_gt_labels")
-            if gt is not None:
-                gt_np = np.asarray(gt).reshape(-1)
-                counts_gt = np.bincount(gt_np, minlength=dataset_num_classes)
-                lines_gt = [f"{i:02d} {names[i]}: {int(c)}" for i, c in enumerate(counts_gt) if c > 0]
-                if lines_gt:
-                    writer.add_text(f"{stage}/gt_class_hist", "\n".join(lines_gt), epoch)
+        #     names = log.label_names_from_dataset(self.dataset, dataset_num_classes)
+        #     preds_np = log.restore_prediction_labels(preds, ignored_label_inds).reshape(-1)
+        #     gt_np = np.asarray(gt).reshape(-1)
 
-        # TODO: log calibration metrics
+        #     preds_t = torch.as_tensor(preds_np, dtype=torch.long)
+        #     gt_t = torch.as_tensor(gt_np, dtype=torch.long)
+
+        # TODO: log performance / calibration metrics
 
         # standard logs
         super().save_logs(writer, epoch)
