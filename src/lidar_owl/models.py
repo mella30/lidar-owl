@@ -16,14 +16,14 @@ class RandLANetFlat(ml3d.models.RandLANet):
         kwargs = dict(kwargs)
         # TODO: still, a random crop of the PC is selected for train & eval. that should NOT be the case!
         # ensure augment block is a plain dict (Open3D mutates it)
-        augment_cfg = kwargs.get("augment")
+        augment_cfg = kwargs.get("augment", None)
         if augment_cfg is not None:
             kwargs["augment"] = OmegaConf.to_container(augment_cfg, resolve=True)
         # reset name for later calls
         kwargs["name"] = "RandLANet"
 
         # resolve configured loss before Open3D model init
-        resolved_loss = resolve_loss(kwargs.get("loss"))
+        resolved_loss = resolve_loss(kwargs.get("loss", "CrossEntropyLoss"))  # TODO: check if default would work
         if resolved_loss is not None:
             kwargs["loss"] = resolved_loss
 
@@ -64,7 +64,7 @@ class RandLANetFlat(ml3d.models.RandLANet):
                 pc, feat, label, tree
             )
 
-            augment_cfg = self.cfg.get("augment", {}).copy()
+            augment_cfg = self.cfg.get("augment", None).copy()
             val_augment_cfg = {}
             if "recenter" in augment_cfg:
                 val_augment_cfg["recenter"] = augment_cfg.pop("recenter")
@@ -114,7 +114,7 @@ class RandLANetFlat(ml3d.models.RandLANet):
 
         # ml3d bug for visu of randlanet: mismatch in key names
         if isinstance(inputs, dict) and 'xyz' not in inputs:
-            coords = inputs.get('coords')
+            coords = inputs.get('coords', None)
             if coords is not None:
                 inputs['xyz'] = coords
         return inputs

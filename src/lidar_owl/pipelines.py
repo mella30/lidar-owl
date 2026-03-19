@@ -1,6 +1,9 @@
-# semseg pipeline wrapper for various modifications
+from datetime import datetime
+from pathlib import Path
+
 import numpy as np
 import open3d.ml.torch as ml3d
+from torch.utils.tensorboard import SummaryWriter
 
 import lidar_owl.log as log
 
@@ -13,53 +16,34 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         # color palette for visu
         self.color_map = log.semkitti_cmap(self.dataset.num_classes)  # TODO: depends on dataset!
 
-    def _get_metric_obj(self, stage):
-        # helper function to access stage metrics
-        if stage == "train":
-            return getattr(self, "metric_train", None)
-        if stage == "val":
-            return getattr(self, "metric_val", None)
-        if stage == "test":
-            return getattr(self, "metric_test", None)
-        return None
+    def _resolve_test_ckpt_path(self):
+        ckpt_path = getattr(self.model.cfg, "ckpt_path", None)
+        if ckpt_path:
+            return Path(ckpt_path)
 
-    def save_logs(self, writer, epoch):
-        # train logger only (BEV visu extension for sanity-checking)
-        visu_cfg = self.cfg.get('projection', {})
-
-        # BEV images
-        ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", [])
-        log.log_projection_images(
-            epoch,
-            self.summary,
-            visu_cfg,
-            self.color_map,
-            writer,
-            ignored_label_inds=ignored_label_inds,
-        )
-
-        # standard logs
-        super().save_logs(writer, epoch)
+        model_name = self.model.__class__.__name__
+        dataset_name = self.dataset.__class__.__name__
+        ckpt_dir = Path(self.cfg.main_log_dir) / f"{model_name}_{dataset_name}_torch" / "checkpoint"
+        ckpt_paths = sorted(ckpt_dir.glob("ckpt_*.pth"))
+        if not ckpt_paths:
+            raise FileNotFoundError(f"No checkpoints found in {ckpt_dir}")
+        return ckpt_paths[-1]
 
     def run_test(self, *args, **kwargs):  # / TODO: see also update_tests
-        # Optionally return predictions and confidences from evaluation
-        return_outputs = kwargs.pop("return_outputs", False)
-        super().run_test(*args, **kwargs)
-        if not return_outputs:
-            return
+        ckpt_path = self._resolve_test_ckpt_path()
+        self.model.cfg.ckpt_path = str(ckpt_path)
+        self.load_ckpt(str(ckpt_path))
 
-        outputs = []
-        for labels, scores in zip(self.ori_test_labels, self.ori_test_probs):
-            scores_np = np.asarray(scores)
-            outputs.append({
-                "predict_labels": np.asarray(labels),
-                "predict_scores": scores_np,
-                "predict_confidences": scores_np.max(axis=1),
-            })
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        eval_log_dir = Path(self.cfg.eval_log_dir) / timestamp
+        writer = SummaryWriter(log_dir=str(eval_log_dir))
+        writer.add_text("test/checkpoint_path", str(ckpt_path), 0)
+        writer.add_scalar("test/checkpoint_epoch", int(ckpt_path.stem.split("_")[-1]), 0)
+        writer.flush()
+        writer.close()
 
-        # TODO: log calibration metrics & 3d visu
-
-        return outputs
+        return {
+            "checkpoint_path": str(ckpt_path),
+            "tensorboard_dir": str(eval_log_dir),
+        }
     
-
-    # also available: run_train, run_inference (preds only) / get_3d_summary()

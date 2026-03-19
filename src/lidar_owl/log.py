@@ -29,7 +29,7 @@ def semkitti_cmap(num_classes: int) -> np.ndarray:
     inv_map = {int(k): int(v) for k, v in data["learning_map_inv"].items()}
     palette = np.zeros((num_classes, 3), dtype=np.float32)
     for train_id in range(num_classes):
-        raw_id = inv_map.get(train_id, 0)
+        raw_id = inv_map.get(train_id, 0)  # fallback: ignored index
         palette[train_id] = color_map.get(raw_id, np.ones(3, dtype=np.float32))
     return palette
 
@@ -41,7 +41,7 @@ def semkitti_train_id_to_name(num_classes: int) -> list[str]:
     labels = {int(k): v for k, v in data["labels"].items()}
     names = []
     for train_id in range(num_classes):
-        raw_id = inv_map.get(train_id, -1)
+        raw_id = inv_map.get(train_id, -1)  # fallback: ignored index
         names.append(labels.get(raw_id, f"raw_{raw_id}"))
     return names
 
@@ -90,36 +90,29 @@ def project(points, labels, palette, size=(512, 512), axes=(0, 1), depth_axis=2,
             canvas[y, x] = palette[label]
     return canvas
 
-def log_projection_images(epoch, summary, cfg, palette, writer, ignored_label_inds=()):
-    # TODO: clean that mess up..
+def log_projection_images(epoch, stage_summary, cfg, palette, writer, ignored_label_inds=()):
+    # TODO: clean that mess up!!!
     # TODO: currently only works for train (does not log val or test, but should)
     # visualizes GT and preds per epoch
-    if not cfg.get('enabled', True):
-        return
-    stages = cfg.get('record_for', list(summary.keys()))
     size = tuple(cfg.get('image_size', [512, 512]))
     axes = tuple(cfg.get('axes', [0, 1])) 
     depth_axis = cfg.get('depth_axis', 2)
 
     # TODO: heuristic for which PCs to log (not random)
-    for stage in stages:
-        stage_summary = summary.get(stage, {})
-        sem = stage_summary.get('semantic_segmentation')
-        if not sem:
-            continue
-    
-        # take only first sample from batched data
-        xyz = util.tensor_to_np(sem.get('vertex_positions'))[0, :, :]
-        gt = util.tensor_to_np(sem.get('vertex_gt_labels'))[0, :, :]
-        pred = util.tensor_to_np(sem.get('vertex_predict_labels'))[0, :, :]
-        pred = restore_prediction_labels(pred, ignored_label_inds)
-        visible_mask = (gt > 0).reshape(-1)
-    
-        gt_img = project(xyz, gt, palette, size, axes, depth_axis, visible_mask=visible_mask)
-        pred_img = project(xyz, pred, palette, size, axes, depth_axis, visible_mask=visible_mask)
-        if gt_img is not None:
-            writer.add_image(f"{stage}/projection_gt",
-                                gt_img.transpose(2, 0, 1), epoch)
-        if pred_img is not None:
-            writer.add_image(f"{stage}/projection_pred",
-                                pred_img.transpose(2, 0, 1), epoch)
+    sem = stage_summary.get('semantic_segmentation')
+
+    # take only first sample from batched data
+    xyz = util.tensor_to_np(sem.get('vertex_positions'))[0, :, :]
+    gt = util.tensor_to_np(sem.get('vertex_gt_labels'))[0, :, :]
+    pred = util.tensor_to_np(sem.get('vertex_predict_labels'))[0, :, :]
+    pred = restore_prediction_labels(pred, ignored_label_inds)
+    visible_mask = (gt > 0).reshape(-1)
+
+    gt_img = project(xyz, gt, palette, size, axes, depth_axis, visible_mask=visible_mask)
+    pred_img = project(xyz, pred, palette, size, axes, depth_axis, visible_mask=visible_mask)
+    if gt_img is not None:
+        writer.add_image(f"projection_gt",
+                            gt_img.transpose(2, 0, 1), epoch)
+    if pred_img is not None:
+        writer.add_image(f"projection_pred",
+                            pred_img.transpose(2, 0, 1), epoch)

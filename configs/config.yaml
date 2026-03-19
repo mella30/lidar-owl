@@ -7,7 +7,6 @@ defaults:
 
 # run args
 mode: train+eval  # train+eval | train | eval
-debug: false  # runs compact debug setup
 clean: false  # cleans logs of old runs (ckpts & stdout)
 
 hydra:

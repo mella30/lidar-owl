@@ -9,19 +9,8 @@ scheduler_gamma: 0.9886
 batch_size: 1
 val_batch_size: 1
 test_batch_size: 1
-return_outputs: false  # only for test phase
-train_sum_dir: ./logs/train_logs/
+train_log_dir: ./logs/train_logs/
+eval_log_dir: ./logs/eval_logs/
 main_log_dir: ./logs
 max_epoch: 100
 save_ckpt_freq: 10
-summary:
-  record_for: ['train', 'val']
-  max_pts: 15000  # downsampling 
-  use_reference: false 
-  max_outputs: 2
-projection:
-  enabled: true
-  record_for: ['train', 'val']
-  image_size: [640, 640]
-  axes: [0, 1]      # XY-top view
-  depth_axis: 2

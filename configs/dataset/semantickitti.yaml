@@ -2,6 +2,7 @@ name: SemanticKITTIFlat
 dataset_path: ???  # mandatory hydra override
 cache_dir: ./logs/cache
 use_cache: true
+test_result_folder: ./eval
 
 training_split: ['00', '01', '02', '03', '04', '05', '06', '07', '09', '10']
 validation_split: ['08']
