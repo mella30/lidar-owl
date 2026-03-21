@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
+from tqdm import tqdm
 import open3d.ml.torch as ml3d
 from torch.utils.tensorboard import SummaryWriter
 
@@ -17,6 +18,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         self.color_map = log.semkitti_cmap(self.dataset.num_classes)  # TODO: depends on dataset!
 
     def _resolve_test_ckpt_path(self):
+        # load the latest checkpoint in given path
         ckpt_path = getattr(self.model.cfg, "ckpt_path", None)
         if ckpt_path:
             return Path(ckpt_path)
@@ -30,20 +32,26 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         return ckpt_paths[-1]
 
     def run_test(self, *args, **kwargs):  # / TODO: see also update_tests
+
+        # load model and create new eval tb
         ckpt_path = self._resolve_test_ckpt_path()
         self.model.cfg.ckpt_path = str(ckpt_path)
         self.load_ckpt(str(ckpt_path))
 
+        # TODO: naming!
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        eval_log_dir = Path(self.cfg.eval_log_dir) / timestamp
-        writer = SummaryWriter(log_dir=str(eval_log_dir))
-        writer.add_text("test/checkpoint_path", str(ckpt_path), 0)
-        writer.add_scalar("test/checkpoint_epoch", int(ckpt_path.stem.split("_")[-1]), 0)
-        writer.flush()
-        writer.close()
+        eval_sum_dir = Path(self.cfg.eval_sum_dir) / timestamp
+        writer = SummaryWriter(log_dir=str(eval_sum_dir))
 
-        return {
-            "checkpoint_path": str(ckpt_path),
-            "tensorboard_dir": str(eval_log_dir),
-        }
+        # loop over test set and run inference 
+        test_split = ml3d.dataloaders.TorchDataloader(dataset=self.dataset.get_split("test"))
+        for i, sample in enumerate(test_split):
+            model_results = self.run_inference(sample['data'])
+
+            preds = model_results['predict_labels']
+            confs = model_results['predict_scores']
+            labels = sample['data']['label']
+
+            log.log_projection_images(i, sample['data']['point'], preds, labels, self.color_map, writer, self.model.cfg["ignored_label_inds"])
+
     

@@ -7,9 +7,6 @@ num_classes: 19  # TODO: dataset dependent
 ignored_label_inds: [0]
 in_channels: 3  # never train on intensity
 dim_output: [16, 64, 128, 256]  # TODO: needs to be overridden for metric learning
-debug_fixed_crop: false
-debug_use_full_frame: false
-debug_fixed_pick_idx: 0
 augment:
   recenter:
     dim: [0, 1]
