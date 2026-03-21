@@ -31,6 +31,19 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             raise FileNotFoundError(f"No checkpoints found in {ckpt_dir}")
         return ckpt_paths[-1]
 
+    def save_logs(self, writer, epoch):
+        ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", [])
+        projection_cfg = self.cfg.get("projection", {})
+        log.log_projection_summary_images(
+            epoch,
+            self.summary,
+            projection_cfg,
+            self.color_map,
+            writer,
+            ignored_label_inds=ignored_label_inds,
+        )
+        super().save_logs(writer, epoch)
+
     def run_test(self, *args, **kwargs):  # / TODO: see also update_tests
 
         # load model and create new eval tb
@@ -57,4 +70,5 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
 
             log.log_projection_images(i, sample['point'], preds, labels, self.color_map, writer, self.model.cfg["ignored_label_inds"])
 
-    
+        writer.flush()
+        writer.close()

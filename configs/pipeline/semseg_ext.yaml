@@ -2,7 +2,6 @@ name: SemSegExt
 # known open3d ml bugs
 num_workers: 0
 pin_memory: false
-# TODO: global optimizer config
 optimizer:
   lr: 0.001
 scheduler_gamma: 0.9886
@@ -14,3 +13,8 @@ eval_sum_dir: ./logs/eval_logs/
 main_log_dir: ./logs
 max_epoch: 100
 save_ckpt_freq: 10
+summary:
+  record_for: ['train', 'valid']  # visu for debug purposes
+  max_pts: 15000
+  use_reference: false
+  max_outputs: 5

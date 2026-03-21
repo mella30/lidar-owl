@@ -110,3 +110,33 @@ def log_projection_images(i, points, pred, gt, palette, writer, ignored_label_in
     if pred_img is not None:
         writer.add_image(f"projection_pred",
                             pred_img.transpose(2, 0, 1), i)
+
+
+def log_projection_summary_images(epoch, summary, cfg, palette, writer, ignored_label_inds=()):
+    if not cfg.get("enabled", True):
+        return
+
+    stages = cfg.get("record_for", list(summary.keys()))
+    size = tuple(cfg.get("image_size", [512, 512]))
+    axes = tuple(cfg.get("axes", [0, 1]))
+    depth_axis = cfg.get("depth_axis", 2)
+
+    for stage in stages:
+        stage_summary = summary.get(stage, {})
+        sem = stage_summary.get("semantic_segmentation")
+        if not sem:
+            continue
+
+        xyz = util.tensor_to_np(sem.get("vertex_positions"))[0, :, :]
+        gt = util.tensor_to_np(sem.get("vertex_gt_labels"))[0, :, :]
+        pred = util.tensor_to_np(sem.get("vertex_predict_labels"))[0, :, :]
+        pred = restore_prediction_labels(pred, ignored_label_inds)
+        visible_mask = (gt > 0).reshape(-1)
+
+        gt_img = project(xyz, gt, palette, size, axes, depth_axis, visible_mask=visible_mask)
+        pred_img = project(xyz, pred, palette, size, axes, depth_axis, visible_mask=visible_mask)
+
+        if gt_img is not None:
+            writer.add_image(f"{stage}/projection_gt", gt_img.transpose(2, 0, 1), epoch)
+        if pred_img is not None:
+            writer.add_image(f"{stage}/projection_pred", pred_img.transpose(2, 0, 1), epoch)
