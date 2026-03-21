@@ -44,14 +44,17 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         writer = SummaryWriter(log_dir=str(eval_sum_dir))
 
         # loop over test set and run inference 
-        test_split = ml3d.dataloaders.TorchDataloader(dataset=self.dataset.get_split("test"))
-        for i, sample in enumerate(test_split):
-            model_results = self.run_inference(sample['data'])
+        test_dataset = self.dataset.get_split("test")
+
+        for i in range(len(test_dataset)):
+            print(i)
+            sample = test_dataset.get_data(i)
+            model_results = self.run_inference(sample)
 
             preds = model_results['predict_labels']
             confs = model_results['predict_scores']
-            labels = sample['data']['label']
+            labels = sample['label']
 
-            log.log_projection_images(i, sample['data']['point'], preds, labels, self.color_map, writer, self.model.cfg["ignored_label_inds"])
+            log.log_projection_images(i, sample['point'], preds, labels, self.color_map, writer, self.model.cfg["ignored_label_inds"])
 
     
