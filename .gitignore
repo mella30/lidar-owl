@@ -234,4 +234,5 @@ docker-compose.override.yml
 thumbs.db
 logs/
 test/ 
+eval/
 main.log
