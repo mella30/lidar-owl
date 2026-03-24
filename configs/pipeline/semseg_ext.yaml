@@ -14,7 +14,7 @@ main_log_dir: ./logs
 max_epoch: 100
 save_ckpt_freq: 10
 summary:
-  record_for: ['train', 'valid']  # visu for debug purposes
+  record_for: ['train', 'valid']  # visu for debug purposes, leave empty in final run
   max_pts: 15000
   use_reference: false
   max_outputs: 5

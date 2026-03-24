@@ -1,4 +1,5 @@
 import open3d.ml.torch as ml3d
+import numpy as np
 
 from lidar_owl.datasets import SemanticKITTIFlat
 from lidar_owl.models import RandLANetFlat
@@ -28,3 +29,16 @@ def resolve_model(name: str):
 MODEL_REGISTRY = {
     "randlanetflat": RandLANetFlat,
 }
+
+
+# helper functions
+def restore_prediction_labels(labels, ignored_label_inds):
+    """Reinsert ignored labels into compact model predictions for visualization."""
+    restored = np.array(labels, copy=True)
+    # Open3D trains on compact class indices after ignored labels are removed
+    # (e.g. SemanticKITTI predictions are 0..18, while dataset train IDs are 1..19).
+    # For logging/export we need to shift predictions back into the dataset label space.
+    for ign_label in sorted(int(label) for label in ignored_label_inds):
+        if ign_label >= 0:
+            restored[restored >= ign_label] += 1
+    return restored

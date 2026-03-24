@@ -4,20 +4,6 @@ import yaml
 from pathlib import Path
 import open3d
 
-import lidar_owl.util as util
-
-
-def restore_prediction_labels(labels, ignored_label_inds):
-    """Reinsert ignored labels into compact model predictions for visualization."""
-    restored = np.array(labels, copy=True)
-    # Open3D trains on compact class indices after ignored labels are removed
-    # (e.g. SemanticKITTI predictions are 0..18, while dataset train IDs are 1..19).
-    # For logging/export we need to shift predictions back into the dataset label space.
-    for ign_label in sorted(int(label) for label in ignored_label_inds):
-        if ign_label >= 0:
-            restored[restored >= ign_label] += 1
-    return restored
-
 
 def semkitti_cmap(num_classes: int) -> np.ndarray:
     # gets semantickitti colors from open3d lib 
@@ -90,20 +76,14 @@ def project(points, labels, palette, size=(512, 512), axes=(0, 1), depth_axis=2,
             canvas[y, x] = palette[label]
     return canvas
 
-def log_projection_images(i, points, pred, gt, palette, writer, ignored_label_inds=()):
+def log_projection_images(i, points, pred, gt, palette, writer):
     # TODO: clean that mess up!!!
-    # TODO: currently only works for train (does not log val or test, but should)
     # visualizes GT and preds per epoch
-    size = [512, 512]
-    axes = [0, 1]
-    depth_axis = 2
 
-    # TODO: heuristic for which PCs to log (not random)
-    pred = restore_prediction_labels(pred, ignored_label_inds)
     visible_mask = (gt > 0).reshape(-1)
 
-    gt_img = project(points, gt, palette, size, axes, depth_axis, visible_mask=visible_mask)
-    pred_img = project(points, pred, palette, size, axes, depth_axis, visible_mask=visible_mask)
+    gt_img = project(points, gt, palette, visible_mask=visible_mask)
+    pred_img = project(points, pred, palette, visible_mask=visible_mask)
     if gt_img is not None:
         writer.add_image(f"projection_gt",
                             gt_img.transpose(2, 0, 1), i)
@@ -111,32 +91,3 @@ def log_projection_images(i, points, pred, gt, palette, writer, ignored_label_in
         writer.add_image(f"projection_pred",
                             pred_img.transpose(2, 0, 1), i)
 
-
-def log_projection_summary_images(epoch, summary, cfg, palette, writer, ignored_label_inds=()):
-    if not cfg.get("enabled", True):
-        return
-
-    stages = cfg.get("record_for", list(summary.keys()))
-    size = tuple(cfg.get("image_size", [512, 512]))
-    axes = tuple(cfg.get("axes", [0, 1]))
-    depth_axis = cfg.get("depth_axis", 2)
-
-    for stage in stages:
-        stage_summary = summary.get(stage, {})
-        sem = stage_summary.get("semantic_segmentation")
-        if not sem:
-            continue
-
-        xyz = util.tensor_to_np(sem.get("vertex_positions"))[0, :, :]
-        gt = util.tensor_to_np(sem.get("vertex_gt_labels"))[0, :, :]
-        pred = util.tensor_to_np(sem.get("vertex_predict_labels"))[0, :, :]
-        pred = restore_prediction_labels(pred, ignored_label_inds)
-        visible_mask = (gt > 0).reshape(-1)
-
-        gt_img = project(xyz, gt, palette, size, axes, depth_axis, visible_mask=visible_mask)
-        pred_img = project(xyz, pred, palette, size, axes, depth_axis, visible_mask=visible_mask)
-
-        if gt_img is not None:
-            writer.add_image(f"{stage}/projection_gt", gt_img.transpose(2, 0, 1), epoch)
-        if pred_img is not None:
-            writer.add_image(f"{stage}/projection_pred", pred_img.transpose(2, 0, 1), epoch)
