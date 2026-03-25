@@ -16,9 +16,11 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         super().__init__(*args, **kwargs)
 
         # TODO: implement early stopping
+        # TODO: log git hash for each run
 
         # color palette for visu
-        self.num_classes = self.dataset.num_classes  # or in model config
+        self.num_classes = self.dataset.num_classes
+        self.num_trained_classes = self.model.cfg['num_classes']  # trained classes in model != available classes in dataset (incl. invalid)
         self.color_map = log.semkitti_cmap(self.num_classes)  # TODO: depends on dataset!
         self.ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", []) 
 
@@ -52,7 +54,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         valid_scores, valid_labels = losses.filter_valid_label(  
             torch.as_tensor(inference_result["predict_scores"], device=self.device),
             torch.as_tensor(gt_labels, device=self.device),
-            self.num_classes,
+            self.num_trained_classes,
             self.ignored_label_inds,
             self.device,
         )
