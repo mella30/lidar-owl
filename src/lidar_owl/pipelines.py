@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import open3d.ml.torch as ml3d
-from open3d.ml.torch.modules import metrics, losses
+from open3d.ml.torch.modules import losses
 from torch.utils.tensorboard import SummaryWriter
 
 import torch
@@ -10,6 +10,7 @@ import torch
 import lidar_owl.log as log
 import lidar_owl.util as util
 import lidar_owl.ml3d_util as ml3d_util
+import lidar_owl.metrics as metrics
 
 class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def __init__(self, *args, **kwargs):
@@ -23,6 +24,11 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         self.num_trained_classes = self.model.cfg['num_classes']  # trained classes in model != available classes in dataset (incl. invalid)
         self.color_map = log.semkitti_cmap(self.num_classes)  # TODO: depends on dataset!
         self.ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", []) 
+        self.class_names = log.compact_label_names_from_dataset(
+            self.dataset,
+            self.num_trained_classes,
+            self.ignored_label_inds,
+        )
 
     def _resolve_test_ckpt_path(self):
         # load the latest checkpoint in given path
@@ -93,7 +99,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         self.model.cfg.ckpt_path = str(ckpt_path)
         self.load_ckpt(str(ckpt_path))
 
-        self.metric_test = metrics.SemSegMetric()  # TODO: extend this class with own metric set
+        self.metric_test = metrics.SemSegMetricExt(label_names=self.class_names)
         writer = self._create_test_writer(ckpt_path)
 
         test_dataset = self.dataset.get_split('test')
@@ -122,4 +128,3 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
 
         writer.flush()
         writer.close()
-
