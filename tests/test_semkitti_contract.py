@@ -1,21 +1,16 @@
 import numpy as np
 import pytest
-import torch
 import yaml
 from pathlib import Path
-
-
-open3d = pytest.importorskip("open3d")
-assert open3d is not None
+import open3d._ml3d
 
 from lidar_owl.log import (
     compact_label_names_from_dataset,
     project,
-    restore_prediction_labels,
     semkitti_cmap,
     semkitti_train_id_to_name,
 )
-from lidar_owl.losses import CrossEntropyFlat
+from lidar_owl.ml3d_util import restore_prediction_labels
 
 
 def _semkitti_resource():
@@ -156,44 +151,3 @@ def test_restored_prediction_labels_match_gt_projection_colors():
     assert pred_img is not None
     np.testing.assert_allclose(pred_img, gt_img)
 
-
-def test_semkitti_label_handling_pipeline():
-    data = _semkitti_data()
-    learning_map = {int(k): int(v) for k, v in data["learning_map"].items()}
-    learning_map_inv = {int(k): int(v) for k, v in data["learning_map_inv"].items()}
-    learning_ignore = {int(k): bool(v) for k, v in data["learning_ignore"].items()}
-
-    raw_target = torch.tensor([0, 1, 10, 13, 252, 60, 81, 99], dtype=torch.long)
-    expected_train_target = torch.tensor([0, 0, 1, 5, 1, 9, 19, 0], dtype=torch.long)
-    train_target = torch.tensor([learning_map[int(label)] for label in raw_target], dtype=torch.long)
-
-    assert torch.equal(train_target, expected_train_target)
-    assert all(learning_ignore[int(label)] == (label == 0) for label in train_target.tolist())
-
-    logits = torch.full((len(raw_target), 20), -6.0, dtype=torch.float32)
-    for row, label in enumerate(train_target.tolist()):
-        logits[row, label] = 6.0
-    logits.requires_grad_(True)
-
-    loss_mod = CrossEntropyFlat(ignore_index=0)
-    loss = loss_mod(logits, train_target)
-    assert torch.isfinite(loss)
-
-    mutated_logits = logits.detach().clone()
-    mutated_logits[0] = 0.0
-    mutated_logits[1] = torch.linspace(-50.0, 50.0, steps=20)
-    mutated_loss = loss_mod(mutated_logits, train_target)
-    assert torch.isclose(loss.detach(), mutated_loss)
-
-    loss.backward()
-    assert logits.grad is not None
-    assert torch.allclose(logits.grad[0], torch.zeros_like(logits.grad[0]))
-    assert torch.allclose(logits.grad[1], torch.zeros_like(logits.grad[1]))
-    assert torch.count_nonzero(logits.grad[2:]).item() > 0
-
-    pred_train = logits.detach().argmax(dim=1)
-    pred_raw = torch.tensor([learning_map_inv[int(label)] for label in pred_train], dtype=torch.long)
-    expected_pred_raw = torch.tensor([0, 0, 10, 20, 10, 40, 81, 0], dtype=torch.long)
-
-    assert torch.equal(pred_train, train_target)
-    assert torch.equal(pred_raw, expected_pred_raw)

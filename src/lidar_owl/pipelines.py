@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import open3d.ml.torch as ml3d
-from open3d.ml.torch.modules import losses
+from open3d.ml.torch.modules import losses as ml3d_losses
 from torch.utils.tensorboard import SummaryWriter
 
 import torch
@@ -57,12 +57,14 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         if not (gt_labels > 0).any():
             return
 
-        valid_scores, valid_labels = losses.filter_valid_label(  
+        # MUST use filter_valid_label here as well, otherwise metrics would compare
+        # compact model predictions against non-compact dataset train IDs.
+        valid_scores, valid_labels = ml3d_losses.filter_valid_label(
             torch.as_tensor(inference_result["predict_scores"], device=self.device),
             torch.as_tensor(gt_labels, device=self.device),
-            self.num_trained_classes,
-            self.ignored_label_inds,
-            self.device,
+            num_classes=self.num_trained_classes,
+            ignored_label_inds=self.ignored_label_inds,
+            device=self.device,
         )
         self.metric_test.update(valid_scores, valid_labels)
 

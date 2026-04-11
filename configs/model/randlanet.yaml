@@ -1,8 +1,8 @@
 name: RandLANetFlat  # TODO: define separate config for hierarchical version
 ckpt_path: null  # TODO: has to be set for eval-only
-loss:
+loss: 
   name: CrossEntropyFlat
-  ignore_index: 0
+  class_weights: true  # true or false
 num_classes: 19  # TODO: dataset dependent
 ignored_label_inds: [0]
 in_channels: 3  # never train on intensity

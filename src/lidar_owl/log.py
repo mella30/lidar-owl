@@ -4,7 +4,7 @@ import yaml
 from pathlib import Path
 import open3d
 
-
+# TODO: these four function can be fused and should be attached to the dataset object
 def semkitti_cmap(num_classes: int) -> np.ndarray:
     # gets semantickitti colors from open3d lib 
     resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"

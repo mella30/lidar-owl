@@ -1,9 +1,10 @@
 # TODO: class mapping for hierarchical trainings
 # TODO: mask managing (via yaml)
 # TODO: carla dataset
-
+from pathlib import Path
 import open3d
 import open3d.ml.torch as ml3d
+import yaml
 
 # open3d-ml dataset wrapper
 class SemanticKITTISplitFlat(open3d._ml3d.datasets.semantickitti.SemanticKITTISplit):
@@ -16,6 +17,9 @@ class SemanticKITTISplitFlat(open3d._ml3d.datasets.semantickitti.SemanticKITTISp
 class SemanticKITTIFlat(ml3d.datasets.SemanticKITTI):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
+        self.class_config = yaml.safe_load(resource.read_text())
     
     def get_split(self, split):
         return SemanticKITTISplitFlat(self, split=split)
