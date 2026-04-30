@@ -7,6 +7,8 @@ import shutil
 from lidar_owl.ml3d_util import resolve_model, resolve_dataset
 from lidar_owl.pipelines import SemanticSegmentationExtended
 
+# TODO: resume training (max time on cluster: 120h)
+
 def _clean_checkpoints(cfg: DictConfig, model_name, dataset_name):
     main_log_dir = Path(cfg.pipeline["main_log_dir"])
     target_dir = main_log_dir / f"{model_name}_{dataset_name}_torch"

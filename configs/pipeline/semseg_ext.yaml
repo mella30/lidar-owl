@@ -8,9 +8,9 @@ scheduler_gamma: 0.9886
 batch_size: 1
 val_batch_size: 1
 test_batch_size: 1
-train_sum_dir: ./logs/train_logs/
-eval_sum_dir: ./logs/eval_logs/
 main_log_dir: ./logs
+train_sum_dir: ${main_log_dir}/train_logs/
+eval_sum_dir: ${main_log_dir}/eval_logs/
 max_epoch: 100
 save_ckpt_freq: 10
 summary:
