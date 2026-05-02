@@ -48,8 +48,9 @@ def resolve_loss(loss_cfg, num_classes=None):
             raise KeyError("Loss config must contain a 'name' field.")
         key = name.lower()
         if key not in LOSS_REGISTRY:
-            available = ", ".join(sorted(LOSS_REGISTRY.keys()))
-            raise KeyError(f"Unknown loss '{name}'. Available losses: {available}")
+            print(f"Unknown loss '{name}'. Available losses: {', '.join(sorted(LOSS_REGISTRY.keys()))}")
+            print("Fallback to Open3D-ML default SemSegLoss...")
+            return None
         cfg.setdefault("num_classes", num_classes)
         return LOSS_REGISTRY[key](**cfg)
 
