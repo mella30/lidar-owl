@@ -1,5 +1,5 @@
 name: SemSegExt
-# known open3d ml bugs
+# workarounds for known open3d ml bugs with num_workers > 0
 num_workers: 0
 pin_memory: false
 optimizer:

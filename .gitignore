@@ -110,9 +110,6 @@ credentials.json
 *.simg
 docker-compose.override.yml
 
-# Code Assistants
-*.codex
-
 # Misc
 *.swp
 *~
