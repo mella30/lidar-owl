@@ -1,7 +1,9 @@
 name: SemSegExt
-# workarounds for known open3d ml bugs with num_workers > 0
+# Cross-platform stable default: avoid the Open3D-ML multi-worker collate path for now.
 num_workers: 0
 pin_memory: false
+prefetch_factor: 1
+persistent_workers: false
 optimizer:
   lr: 0.001
 scheduler_gamma: 0.9886

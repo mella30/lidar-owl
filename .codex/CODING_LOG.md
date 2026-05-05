@@ -21,12 +21,21 @@ Get RandLA-Net / Open3D-ML training stable on SemanticKITTI.
 - Current optimizer LR: `0.001`.
 - Current scheduler gamma: `0.9886`.
 - Current batch sizes: `1` for train/val/test.
-- Current data-loader config: `num_workers: 4`, `prefetch_factor: 2`, `persist_workers: true`, `pin_memory: false`.
+- Current checked-in cross-platform data-loader config:
+  - `num_workers: 0`
+  - `pin_memory: false`
+  - `prefetch_factor: 1`
+  - `persistent_workers: false`
+- Final loader decision for reproducible runs across Mac, WSL, and Helix:
+  - keep `num_workers: 0` as the repository default because Open3D-ML worker-based batching is not currently trusted across environments;
+  - keep `pin_memory: false` because the cluster issue appears to be in the worker/collate path and pinned host memory only adds pressure while not helping local CPU debugging;
+  - keep `prefetch_factor: 1` as the documented low-memory setting for future worker experiments, but treat it as effectively inactive while `num_workers: 0`;
+  - keep `persistent_workers: false` so no worker state is kept alive between epochs if worker-based loading is re-enabled later.
 - `clean: false` by default; `clean: true` removes old checkpoint/log and cache dirs before a run.
 - Validation split `08` is also used as `test_split` until real SemanticKITTI test handling is added.
 
 ### Current open questions
-- Is `num_workers: 4` stable on both local machines and the cluster, or should debug runs keep an override with `num_workers: 0`?
+- If worker-based loading is revisited later, which exact Open3D/PyTorch version combination makes `num_workers > 0` safe again?
 - Is eval instability caused by sampling, class imbalance, label mapping, or config?
 - Are Open3D-style class weights from raw class counts still the right baseline, or should an unweighted baseline be compared first?
 - Should `in_channels: 3` stay fixed for the stable baseline, or should intensity be tested later as a controlled ablation?
@@ -36,8 +45,8 @@ Get RandLA-Net / Open3D-ML training stable on SemanticKITTI.
 1. Run `pytest` to confirm label/loss/projection contracts still pass.
 2. Add a tiny debug config or documented command recipe for local smoke tests.
 3. Run a short train smoke test with `dataset.dataset_path=...` and confirm checkpoint + TensorBoard outputs are created.
-4. Compare smoke behavior with `num_workers=0` and current `num_workers=4`.
-5. Add a SLURM smoke-test script once the local smoke command is stable.
+4. Add a SLURM smoke-test script once the local smoke command is stable.
+5. Record one Helix run with `nvidia-smi` plus host RAM usage to confirm the low-GPU-util bottleneck is loader-side.
 6. Only then tune LR / scheduler / class weighting.
 
 ### Useful run notes
@@ -148,11 +157,20 @@ Get RandLA-Net / Open3D-ML training stable on SemanticKITTI.
   - preserve experiment reproducibility;
   - avoid hardcoded absolute paths;
   - prioritize stable baselines, clean evaluation, and reproducible experiments over adding new methods.
-- Current uncommitted config change in `configs/pipeline/semseg_ext.yaml`:
-  - `num_workers` changed from `0` to `4`;
-  - added `prefetch_factor: 2`;
-  - added `persist_workers: true`;
-  - kept `pin_memory: false`.
+- Investigated Helix data-loading instability:
+  - low GPU utilization on Helix is consistent with the GPU waiting on CPU-side loading/preprocessing when `num_workers: 0`;
+  - increasing `num_workers` does not increase batch size, but it does increase host-memory use because workers prefetch future batches;
+  - the Open3D-ML warning came from `open3d/_ml3d/torch/dataloaders/default_batcher.py:50` during collate, not from the model forward pass;
+  - warning text indicated a reused output buffer being reshaped from `[33792]` to `[4, 2816, 3]`, which points at the worker/shared-memory collate path rather than a semantic model bug;
+  - resulting OOM on Helix is therefore more likely to be CPU RAM / pinned memory / worker-prefetch pressure than true CUDA memory exhaustion.
+- Finalized repository-wide loader defaults for portability:
+  - `num_workers: 0`
+  - `pin_memory: false`
+  - `prefetch_factor: 1`
+  - `persistent_workers: false`
+- Rationale:
+  - these values keep the checked-in config runnable on Mac CPU, WSL, and Helix without relying on the fragile Open3D-ML multi-worker path;
+  - environment-specific performance tuning can still be done via Hydra overrides in private run commands instead of changing the committed baseline.
 
 ## Established Technical Contracts
 
