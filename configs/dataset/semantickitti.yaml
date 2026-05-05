@@ -1,6 +1,6 @@
 name: SemanticKITTIFlat
 dataset_path: ???  # mandatory hydra override
-cache_dir: ./logs/cache
+cache_dir: ${.dataset_path}/cache
 use_cache: true
 test_result_folder: ./eval
 

@@ -1,7 +1,7 @@
 name: SemSegExt
 # Cross-platform stable default
 num_workers: 2
-pin_memory: false  # TODO: test if faster, then allocate more CPU RAM
+pin_memory: true
 # prefetch_factor: 1  # NOT used by Open3D ML
 # persistent_workers: false  # NOT used by Open3D ML
 optimizer:
