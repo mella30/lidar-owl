@@ -1,5 +1,8 @@
 import open3d.ml.torch as ml3d
 import numpy as np
+import torch
+
+import open3d._ml3d.torch.dataloaders.default_batcher as default_batcher
 
 from lidar_owl.datasets import SemanticKITTIFlat
 from lidar_owl.models import RandLANetFlat
@@ -29,6 +32,36 @@ def resolve_model(name: str):
 MODEL_REGISTRY = {
     "randlanetflat": RandLANetFlat,
 }
+
+
+# monkeypatch for open3d-ml collate_fn to allow for num_workers > 0
+def patch_open3d_default_batcher_resize_warning():
+    if getattr(default_batcher, "_lidar_owl_resize_warning_patch", False):
+        return
+
+    original_default_collate = default_batcher.default_collate
+
+    def default_collate_patched(batch):
+        elem = batch[0]
+
+        if isinstance(elem, torch.Tensor):
+            out = None
+            if torch.utils.data.get_worker_info() is not None:
+                numel = sum(x.numel() for x in batch)
+                if hasattr(elem, "_typed_storage"):
+                    storage = elem._typed_storage()._new_shared(
+                        numel,
+                        device=elem.device,
+                    )
+                else:
+                    storage = elem.storage()._new_shared(numel)
+                out = elem.new(storage).resize_(len(batch), *elem.size())
+            return torch.stack(batch, 0, out=out)
+
+        return original_default_collate(batch)
+
+    default_batcher.default_collate = default_collate_patched
+    default_batcher._lidar_owl_resize_warning_patch = True
 
 
 # helper functions

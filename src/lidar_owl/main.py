@@ -4,7 +4,8 @@ from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
 import shutil
 
-from lidar_owl.ml3d_util import resolve_model, resolve_dataset
+from lidar_owl.ml3d_util import patch_open3d_default_batcher_resize_warning, resolve_model, resolve_dataset
+
 from lidar_owl.pipelines import SemanticSegmentationExtended
 
 # TODO: resume training (max time on cluster: 120h)
@@ -29,6 +30,10 @@ def _open3d_ce_class_weights(num_per_class):
 
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def main(cfg: DictConfig):
+    # monkeypatch open3d-ml default batcher to allow for num_workers > 0 without resize warnings
+    patch_open3d_default_batcher_resize_warning()
+    
+
     model_name = cfg["model"]["name"]
     dataset_name = cfg["dataset"]["name"]
     if cfg.get("clean", False):
