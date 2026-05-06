@@ -1,6 +1,7 @@
 # TODO
 
 ## Immediate
+- [ ] save preprocessed npy files in workspace & copy into TMP dir
 - [ ] implement early stopping & resume training (max time on cluster: 40h)
 - [ ] log git hash for each run
 - [ ] remove all .get() accesses in dicts and replace with [<key>]
