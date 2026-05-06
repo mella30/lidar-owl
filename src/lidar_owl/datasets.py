@@ -20,6 +20,9 @@ class SemanticKITTIFlat(ml3d.datasets.SemanticKITTI):
 
         resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
         self.class_config = yaml.safe_load(resource.read_text())
+
+        # sensor FOV for projection visualizations
+        self.range_size = self.cfg.cfg_dict["sensor_fov"]
     
     def get_split(self, split):
         return SemanticKITTISplitFlat(self, split=split)

@@ -8,7 +8,7 @@ from lidar_owl.ml3d_util import patch_open3d_default_batcher_resize_warning, res
 
 from lidar_owl.pipelines import SemanticSegmentationExtended
 
-# TODO: resume training (max time on cluster: 120h)
+# TODO: resume training (max time on cluster: 40h)
 
 def _clean_checkpoints(cfg: DictConfig, model_name, dataset_name):
     main_log_dir = Path(cfg.pipeline["main_log_dir"])
@@ -21,7 +21,7 @@ def _clean_checkpoints(cfg: DictConfig, model_name, dataset_name):
         shutil.rmtree(cache_dir)
         print(f"[clean] removed cache dir: {cache_dir}")
 
-# TODO: remove in final version
+# NOTE: remove in final version
 def _open3d_ce_class_weights(num_per_class):
     num_per_class = np.asarray(num_per_class, dtype=np.float32)
     weight = num_per_class / float(num_per_class.sum())
@@ -43,7 +43,7 @@ def main(cfg: DictConfig):
     dataset_cfg = OmegaConf.to_container(cfg.dataset, resolve=True)
 
     # forward class weights from dataset config to loss config if requested
-    # TODO: remove in final version?
+    # NOTE: remove in final version?
     loss_cfg = model_cfg.get("loss") if isinstance(model_cfg, dict) else None
     if isinstance(loss_cfg, dict):
         class_weights_cfg = loss_cfg.get("class_weights", None)

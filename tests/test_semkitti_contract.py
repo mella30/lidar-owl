@@ -5,10 +5,10 @@ from pathlib import Path
 import open3d._ml3d
 
 from lidar_owl.log import (
-    compact_label_names_from_dataset,
+    _compact_label_names_from_dataset,
     project,
-    semkitti_cmap,
-    semkitti_train_id_to_name,
+    _semkitti_cmap,
+    _semkitti_train_id_to_name,
 )
 from lidar_owl.ml3d_util import restore_prediction_labels
 
@@ -23,7 +23,7 @@ def _semkitti_data():
 
 
 def test_semkitti_name_contract_known_ids():
-    names = semkitti_train_id_to_name(20)
+    names = _semkitti_train_id_to_name(20)
     assert len(names) == 20
     assert names[0] == "unlabeled"
     assert names[19] == "traffic-sign"
@@ -31,9 +31,9 @@ def test_semkitti_name_contract_known_ids():
 
 def test_compact_semkitti_metric_names_skip_ignored_unlabeled():
     class DummyDataset:
-        label_to_names = {idx: name for idx, name in enumerate(semkitti_train_id_to_name(20))}
+        label_to_names = {idx: name for idx, name in enumerate(_semkitti_train_id_to_name(20))}
 
-    names = compact_label_names_from_dataset(DummyDataset(), 19, ignored_label_inds=[0])
+    names = _compact_label_names_from_dataset(DummyDataset(), 19, ignored_label_inds=[0])
 
     assert len(names) == 19
     assert names[0] == "car"
@@ -41,7 +41,7 @@ def test_compact_semkitti_metric_names_skip_ignored_unlabeled():
 
 
 def test_semkitti_palette_shape_and_range():
-    palette = semkitti_cmap(20)
+    palette = _semkitti_cmap(20)
     assert palette.shape == (20, 3)
     assert np.all(palette >= 0.0)
     assert np.all(palette <= 1.0)
@@ -56,7 +56,7 @@ def test_project_ignores_label_zero_and_renders_positive_labels():
         [[0.9, 0.1, 0.1], [0.1, 0.9, 0.1], [0.1, 0.1, 0.9]], dtype=np.float32
     )
 
-    img = project(points, labels, palette, size=(64, 64), axes=(0, 1), depth_axis=2)
+    img = project(points, labels, palette, bev_size=(64, 64), axes=(0, 1), depth_axis=2)
     assert img is not None
 
     # Label 0 should be ignored by projection mask.
@@ -75,7 +75,7 @@ def test_project_out_of_range_label_raises():
     palette = np.array([[0.0, 0.0, 0.0], [0.3, 0.3, 0.3], [0.6, 0.6, 0.6]], dtype=np.float32)
 
     with pytest.raises(IndexError):
-        project(points, labels, palette, size=(32, 32), axes=(0, 1), depth_axis=2)
+        project(points, labels, palette, bev_size=(32, 32), axes=(0, 1), depth_axis=2)
 
 
 def test_project_keeps_same_frame_when_ignore_mask_differs():
@@ -87,8 +87,8 @@ def test_project_keeps_same_frame_when_ignore_mask_differs():
     pred = np.array([[1], [1], [1], [0]], dtype=np.int64)
     palette = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32)
 
-    gt_img = project(points, gt, palette, size=(21, 5), axes=(0, 1), depth_axis=2)
-    pred_img = project(points, pred, palette, size=(21, 5), axes=(0, 1), depth_axis=2)
+    gt_img = project(points, gt, palette, bev_size=(21, 5), axes=(0, 1), depth_axis=2)
+    pred_img = project(points, pred, palette, bev_size=(21, 5), axes=(0, 1), depth_axis=2)
 
     assert gt_img is not None
     assert pred_img is not None
@@ -110,7 +110,7 @@ def test_project_with_gt_visibility_mask_hides_extra_prediction_points():
         points,
         pred,
         palette,
-        size=(21, 5),
+        bev_size=(21, 5),
         axes=(0, 1),
         depth_axis=2,
         visible_mask=visible_mask,
@@ -135,14 +135,14 @@ def test_restored_prediction_labels_match_gt_projection_colors():
     )
     gt = np.array([[1], [9], [19]], dtype=np.int64)
     pred_compact = np.array([[0], [8], [18]], dtype=np.int64)
-    palette = semkitti_cmap(20)
+    palette = _semkitti_cmap(20)
 
-    gt_img = project(points, gt, palette, size=(64, 64), axes=(0, 1), depth_axis=2)
+    gt_img = project(points, gt, palette, bev_size=(64, 64), axes=(0, 1), depth_axis=2)
     pred_img = project(
         points,
         restore_prediction_labels(pred_compact, ignored_label_inds=[0]),
         palette,
-        size=(64, 64),
+        bev_size=(64, 64),
         axes=(0, 1),
         depth_axis=2,
     )

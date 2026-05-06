@@ -22,9 +22,10 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         # color palette for visu
         self.num_classes = self.dataset.num_classes
         self.num_trained_classes = self.model.cfg['num_classes']  # trained classes in model != available classes in dataset (incl. invalid)
-        self.color_map = log.semkitti_cmap(self.num_classes)  # TODO: depends on dataset!
+        self.color_map = log._semkitti_cmap(self.num_classes)  # TODO: make that depend on dataset, not semantickitti-specific
+        self.range_size = getattr(self.dataset, "range_size", None)
         self.ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", []) 
-        self.class_names = log.compact_label_names_from_dataset(
+        self.class_names = log._compact_label_names_from_dataset(
             self.dataset,
             self.num_trained_classes,
             self.ignored_label_inds,
@@ -70,22 +71,24 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
 
     def save_logs(self, writer, epoch):
         # add visu of train / val preds
-        stages = self.cfg.get("projection", {}).get("record_for", list(self.summary.keys()))
+        stages = list(self.summary.keys())
+        proj_view = self.cfg.cfg_dict["summary"]["view"]
+        range_size = self.dataset.range_size
 
         for stage in stages:
             stage_summary = self.summary.get(stage, {})
-            sem = stage_summary.get("semantic_segmentation")
+            sem = stage_summary["semantic_segmentation"]
             if not sem:
                 continue
 
-            xyz = util.tensor_to_np(sem.get("vertex_positions"))[0, :, :]
-            gt = util.tensor_to_np(sem.get("vertex_gt_labels"))[0, :, :]
-            pred = util.tensor_to_np(sem.get("vertex_predict_labels"))[0, :, :]
+            xyz = util.tensor_to_np(sem["vertex_positions"])[0, :, :]
+            gt = util.tensor_to_np(sem["vertex_gt_labels"])[0, :, :]
+            pred = util.tensor_to_np(sem["vertex_predict_labels"])[0, :, :]
             pred = ml3d_util.restore_prediction_labels(pred, self.ignored_label_inds)
             visible_mask = (gt > 0).reshape(-1)
 
-            gt_img = log.project(xyz, gt, self.color_map, visible_mask=visible_mask)
-            pred_img = log.project(xyz, pred, self.color_map, visible_mask=visible_mask)
+            gt_img = log.project(xyz, gt, self.color_map, view=proj_view, range_size=range_size, visible_mask=visible_mask,)
+            pred_img = log.project(xyz, pred, self.color_map, view=proj_view, range_size=range_size, visible_mask=visible_mask)
 
             if gt_img is not None:
                 writer.add_image(f"{stage}/projection_gt", gt_img.transpose(2, 0, 1), epoch)
@@ -105,6 +108,8 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         writer = self._create_test_writer(ckpt_path)
 
         test_dataset = self.dataset.get_split('test')
+        proj_view = self.summary["view"]
+        range_size = self.dataset.range_size
 
         for idx in range(len(test_dataset)):
             sample = test_dataset.get_data(idx)
@@ -121,6 +126,8 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
                 gt_labels,
                 self.color_map,
                 writer,
+                view=proj_view,
+                range_size=range_size,
             )
 
         if len(self.metric_test.acc()) > 0:
