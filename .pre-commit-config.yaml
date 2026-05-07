@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pytest-tests
+        name: Run tests before push
+        entry: python -m pytest tests
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
