@@ -1,8 +1,10 @@
 import numpy as np
 import pytest
 import yaml
+import torch
 from pathlib import Path
 import open3d._ml3d
+from open3d.ml.torch.modules import losses as ml3d_losses
 
 from lidar_owl.log import (
     _compact_label_names_from_dataset,
@@ -11,6 +13,7 @@ from lidar_owl.log import (
     _semkitti_train_id_to_name,
 )
 from lidar_owl.ml3d_util import restore_prediction_labels
+from lidar_owl.metrics import SemSegMetricExt
 
 
 def _semkitti_resource():
@@ -56,7 +59,7 @@ def test_project_ignores_label_zero_and_renders_positive_labels():
         [[0.9, 0.1, 0.1], [0.1, 0.9, 0.1], [0.1, 0.1, 0.9]], dtype=np.float32
     )
 
-    img = project(points, labels, palette, view="bev",bev_size=(64, 64))
+    img = project(points, labels, palette, view="bev", bev_size=(64, 64))
     assert img is not None
 
     # Label 0 should be ignored by projection mask.
@@ -149,3 +152,65 @@ def test_restored_prediction_labels_match_gt_projection_colors():
     assert pred_img is not None
     np.testing.assert_allclose(pred_img, gt_img)
 
+
+def _one_hot_scores(labels, num_classes):
+    scores = np.zeros((len(labels), num_classes), dtype=np.float32)
+    scores[np.arange(len(labels)), labels] = 1.0
+    return torch.as_tensor(scores)
+
+
+def test_val_metric_contract_perfect_predictions_have_full_miou():
+    labels = np.array([0, 1, 2, 0, 1, 2], dtype=np.int64)
+    metric = SemSegMetricExt(label_names=["class_0", "class_1", "class_2"])
+
+    metric.update(_one_hot_scores(labels, num_classes=3), torch.as_tensor(labels))
+
+    np.testing.assert_allclose(metric.iou(), [1.0, 1.0, 1.0, 1.0])
+    np.testing.assert_allclose(metric.acc(), [1.0, 1.0, 1.0, 1.0])
+
+
+def test_val_metric_contract_swapped_predictions_have_zero_miou():
+    labels = np.array([0, 1, 2, 0, 1, 2], dtype=np.int64)
+    predictions = np.array([1, 2, 0, 1, 2, 0], dtype=np.int64)
+    metric = SemSegMetricExt(label_names=["class_0", "class_1", "class_2"])
+
+    metric.update(_one_hot_scores(predictions, num_classes=3), torch.as_tensor(labels))
+
+    np.testing.assert_allclose(metric.iou(), [0.0, 0.0, 0.0, 0.0])
+
+
+def test_val_metric_contract_absent_classes_do_not_change_mean_iou():
+    # This protects against an easy-to-miss mIoU artifact: absent classes should be
+    # ignored via nanmean, not counted as zero and not counted as perfect.
+    labels = np.array([0, 0, 1, 1], dtype=np.int64)
+    metric = SemSegMetricExt(label_names=["class_0", "class_1", "absent_class"])
+
+    metric.update(_one_hot_scores(labels, num_classes=3), torch.as_tensor(labels))
+
+    iou = metric.iou()
+    np.testing.assert_allclose(iou[:2], [1.0, 1.0])
+    assert np.isnan(iou[2])
+    assert iou[-1] == pytest.approx(1.0)
+
+
+def test_val_metric_contract_semkitti_ignored_unlabeled_filtering():
+    # SemanticKITTI dataset train IDs include unlabeled=0, but the model predicts
+    # compact classes 0..18 after Open3D filters ignored_label_inds=[0].
+    gt_dataset_train_ids = torch.tensor([0, 1, 9, 19, 0], dtype=torch.long)
+    pred_compact_ids = np.array([5, 0, 8, 18, 7], dtype=np.int64)
+    raw_scores = _one_hot_scores(pred_compact_ids, num_classes=19)
+
+    valid_scores, valid_labels = ml3d_losses.filter_valid_label(
+        raw_scores,
+        gt_dataset_train_ids,
+        num_classes=19,
+        ignored_label_inds=[0],
+        device=raw_scores.device,
+    )
+
+    metric = SemSegMetricExt(label_names=[f"class_{idx}" for idx in range(19)])
+    metric.update(valid_scores, valid_labels)
+
+    iou = np.asarray(metric.iou(), dtype=np.float64)
+    np.testing.assert_array_equal(valid_labels.numpy(), np.array([0, 8, 18]))
+    np.testing.assert_allclose(iou[[0, 8, 18, -1]], [1.0, 1.0, 1.0, 1.0])

@@ -4,7 +4,7 @@
 - [ ] benchmark semseg performance (own vs open3dml sample script)
 - [ ] save preprocessed npy files in workspace & copy into TMP dir
 - [ ] implement early stopping & resume training (max time on cluster: 40h)
-- [ ] log git hash for each run
+- [x] log git hash for each run
 - [ ] remove all .get() accesses in dicts and replace with [<key>]
 
 
