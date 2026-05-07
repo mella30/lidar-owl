@@ -14,14 +14,19 @@ class CrossEntropyFlat(torch.nn.Module):
     def __init__(self, ignore_index=-1, class_weights=None, num_classes=None):
         super().__init__()
         self.ignore_index = ignore_index
-        self.class_weights = torch.tensor(class_weights, dtype=torch.float32)
+        self.class_weights = (
+            None if class_weights is None else torch.tensor(class_weights, dtype=torch.float32)
+        )
         self.num_classes = num_classes
 
     def forward(self, logits, target):
+        weight = None
+        if self.class_weights is not None:
+            weight = self.class_weights.to(device=logits.device)
         return F.cross_entropy(
             logits,
             target,
-            weight=self.class_weights.to(device=logits.device),
+            weight=weight,
             ignore_index=self.ignore_index,
         )
 
