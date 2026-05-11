@@ -17,7 +17,6 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         super().__init__(*args, **kwargs)
 
         # TODO: implement early stopping
-        # TODO: log git hash for each run
 
         # color palette for visu
         self.num_classes = self.dataset.num_classes

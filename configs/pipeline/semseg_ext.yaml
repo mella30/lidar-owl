@@ -10,7 +10,7 @@ scheduler_gamma: 0.9886
 batch_size: 2
 val_batch_size: 1
 test_batch_size: 1
-main_log_dir: ./logs
+main_log_dir: ???  # hydra mandatory override
 train_sum_dir: ${.main_log_dir}/train_logs/
 eval_sum_dir: ${.main_log_dir}/eval_logs/
 max_epoch: 10  # 100 is way too much
