@@ -4,6 +4,29 @@ import yaml
 from pathlib import Path
 import open3d
 
+def _git_hash():
+    git_dir = Path(__file__).resolve().parents[2] / ".git"
+    try:
+        head = (git_dir / "HEAD").read_text().strip()
+        if head.startswith("ref: "):
+            ref = head.split(" ", 1)[1]
+            ref_path = git_dir / ref
+            if ref_path.exists():
+                return ref_path.read_text().strip()
+
+            packed = git_dir / "packed-refs"
+            if packed.exists():
+                for line in packed.read_text().splitlines():
+                    if line.startswith("#") or not line.strip():
+                        continue
+                    sha, name = line.split(" ", 1)
+                    if name == ref:
+                        return sha
+            return "unknown"
+        return head
+    except OSError:
+        return "unknown"
+
 # TODO: these two functions can be fused and should be attached to the dataset object
 def _semkitti_cmap(num_classes: int) -> np.ndarray:
     # gets semantickitti colors from open3d lib 

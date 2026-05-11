@@ -49,8 +49,11 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
 
         eval_log_dir = Path(self.cfg.eval_sum_dir) / timestamp
         writer = SummaryWriter(log_dir=str(eval_log_dir))
+        # log checkpoint info in tb for reference
         writer.add_text("test/checkpoint_path", str(ckpt_path), 0)
         writer.add_scalar("test/checkpoint_epoch", int(ckpt_path.stem.split("_")[-1]), 0)
+        # log git hash for eval
+        writer.add_text("test_run/git_hash", log._git_hash(), 0)
         return writer
 
     def _update_test_metric(self, inference_result, gt_labels):
@@ -69,6 +72,10 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         self.metric_test.update(valid_scores, valid_labels)
 
     def save_logs(self, writer, epoch):
+        # log train git hash for reference
+        if epoch == 0:
+            writer.add_text("train_run/git_hash", log._git_hash(), 0)
+
         # add visu of train / val preds
         stages = list(self.summary.keys())
         proj_view = self.cfg.cfg_dict["summary"]["view"]

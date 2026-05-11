@@ -61,7 +61,7 @@ def main(cfg: DictConfig):
     # set up model, dataset and pipeline
     model = resolve_model(model_name)(**model_cfg)
     dataset = resolve_dataset(dataset_name)(**dataset_cfg)
-    pipeline = SemanticSegmentationExtended(model, dataset, **pipeline_cfg)
+    pipeline = SemanticSegmentationExtended(model, dataset, **pipeline_cfg)  # TODO: load from hydra config
 
     if cfg.mode == "train+eval":
         pipeline.run_train()
