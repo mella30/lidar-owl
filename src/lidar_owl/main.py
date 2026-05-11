@@ -41,6 +41,7 @@ def main(cfg: DictConfig):
 
     model_cfg = OmegaConf.to_container(cfg.model, resolve=True)
     dataset_cfg = OmegaConf.to_container(cfg.dataset, resolve=True)
+    pipeline_cfg = OmegaConf.to_container(cfg.pipeline, resolve=True)
 
     # forward class weights from dataset config to loss config if requested
     # NOTE: remove in final version?
@@ -59,8 +60,8 @@ def main(cfg: DictConfig):
 
     # set up model, dataset and pipeline
     model = resolve_model(model_name)(**model_cfg)
-    dataset = resolve_dataset(dataset_name)(**cfg.dataset)
-    pipeline = SemanticSegmentationExtended(model, dataset, **cfg.pipeline)
+    dataset = resolve_dataset(dataset_name)(**dataset_cfg)
+    pipeline = SemanticSegmentationExtended(model, dataset, **pipeline_cfg)
 
     if cfg.mode == "train+eval":
         pipeline.run_train()
