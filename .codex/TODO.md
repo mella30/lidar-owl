@@ -1,7 +1,7 @@
 # TODO
 
 ## Immediate
-- [ ] benchmark semseg performance (own vs open3dml sample script)
+- [x] benchmark semseg performance (own vs open3dml sample script)
 - [ ] save preprocessed npy files in workspace & copy into TMP dir
 - [ ] implement early stopping & resume training (max time on cluster: 40h)
 - [x] log git hash for each run

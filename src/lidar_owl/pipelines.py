@@ -108,7 +108,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         writer = self._create_test_writer(ckpt_path)
 
         test_dataset = self.dataset.get_split('test')
-        proj_view = self.summary["view"]
+        proj_view = self.cfg.cfg_dict["summary"]["view"]
         range_size = self.dataset.range_size
 
         for idx in range(len(test_dataset)):
