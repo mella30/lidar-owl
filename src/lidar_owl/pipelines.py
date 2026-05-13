@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 from pathlib import Path
 
 import open3d.ml.torch as ml3d
@@ -12,11 +13,16 @@ import lidar_owl.util as util
 import lidar_owl.ml3d_util as ml3d_util
 import lidar_owl.metrics as metrics
 
+logger = logging.getLogger(__name__)
+
+
+class EarlyStopping(Exception):
+    pass
+
+
 class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # TODO: implement early stopping
 
         # color palette for visu
         self.num_classes = self.dataset.num_classes
@@ -29,6 +35,8 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             self.num_trained_classes,
             self.ignored_label_inds,
         )
+        # early stopping helper variables
+        self.val_miou_history = [-1.0]
 
     def _resolve_test_ckpt_path(self):
         # load the latest checkpoint in given path
@@ -71,6 +79,39 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         )
         self.metric_test.update(valid_scores, valid_labels)
 
+
+    def _check_early_stopping(self, writer, epoch):
+        early_stopping = self.cfg.early_stopping
+        if early_stopping is None:
+            return
+        if early_stopping.monitor != "val_miou":
+            raise ValueError(f"Unsupported early stopping monitor '{early_stopping.monitor}'. Use 'val_miou'.")
+
+        val_ious = self.metric_val.iou()
+        if not val_ious:
+            return
+
+        if val_ious[-1] > max(self.val_miou_history) + early_stopping.delta:
+            self.val_miou_history = [val_ious[-1]]  # reset list if there is an improvement
+            # remove previous best checkpoints and keep current one
+            path_ckpt = Path(self.cfg.logs_dir) / 'checkpoint'
+            for ckpt in path_ckpt.glob("ckpt_*.pth"):
+                logger.info("Removing previous checkpoint: %s", ckpt)
+                ckpt.unlink()
+            self.save_ckpt(epoch)  # save current (best) checkpoint
+        else:
+            # current mIoU is worse than the best one so far
+            self.val_miou_history.append(val_ious[-1])
+            if len(self.val_miou_history) > early_stopping.patience:
+                writer.add_text(
+                    "early_stopping/status",
+                    f"Stopped at epoch {epoch}: val mIoU {val_ious[-1]:.6f} did not improve over best mIoU {max(self.val_miou_history):.6f} in the last {early_stopping.patience} epochs.",
+                    epoch,
+                )
+                writer.flush()
+                raise EarlyStopping
+            
+
     def save_logs(self, writer, epoch):
         # log train git hash for reference
         if epoch == 0:
@@ -78,7 +119,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
 
         # add visu of train / val preds
         stages = list(self.summary.keys())
-        proj_view = self.cfg.cfg_dict["summary"]["view"]
+        proj_view = self.cfg.summary["view"]
         range_size = self.dataset.range_size
 
         for stage in stages:
@@ -101,7 +142,18 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             if pred_img is not None:
                 writer.add_image(f"{stage}/projection_pred", pred_img.transpose(2, 0, 1), epoch)
 
+        if epoch > 0:
+            self._check_early_stopping(writer, epoch)
+
         super().save_logs(writer, epoch)
+
+
+    def run_train(self, *args, **kwargs):
+        try:
+            return super().run_train(*args, **kwargs)
+        except EarlyStopping:
+            logger.info("Early stopping triggered.")
+            return None
 
     def run_test(self, *args, **kwargs):
 

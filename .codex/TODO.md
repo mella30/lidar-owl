@@ -3,10 +3,9 @@
 ## Immediate
 - [x] benchmark semseg performance (own vs open3dml sample script)
 - [ ] save preprocessed npy files in workspace & copy into TMP dir
-- [ ] implement early stopping & resume training (max time on cluster: 40h)
+- [x] implement early stopping & resume training (max time on cluster: 40h)
 - [x] log git hash for each run
-- [ ] remove all .get() accesses in dicts and replace with [<key>]
-
+- [ ] remove all .get() accesses in config dicts and replace with .<attribute> access 
 
 ## Later
 - [ ] hierarchical models, derive from ml3d base model
