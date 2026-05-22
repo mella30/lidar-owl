@@ -8,7 +8,6 @@ from lidar_owl.ml3d_util import patch_open3d_default_batcher_resize_warning, res
 
 from lidar_owl.pipelines import SemanticSegmentationExtended
 
-# TODO: resume training (max time on cluster: 40h)
 
 def _clean_checkpoints(cfg: DictConfig, model_name, dataset_name):
     main_log_dir = Path(cfg.pipeline["main_log_dir"])
@@ -61,7 +60,7 @@ def main(cfg: DictConfig):
     # set up model, dataset and pipeline
     model = resolve_model(model_name)(**model_cfg)
     dataset = resolve_dataset(dataset_name)(**dataset_cfg)
-    pipeline = SemanticSegmentationExtended(model, dataset, **pipeline_cfg)  # TODO: load from hydra config
+    pipeline = SemanticSegmentationExtended(model, dataset, **pipeline_cfg)  # hardcoded to avoid circular import
 
     if cfg.mode == "train+eval":
         pipeline.run_train()

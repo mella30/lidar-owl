@@ -3,7 +3,7 @@ ckpt_path: null  # NOTE: has to be set for eval-only
 loss: 
   name: CrossEntropyFlat  # fallback: SemSegLoss
   class_weights: true  # true or false
-num_classes: 19  # TODO: dataset dependent
+num_classes: ${dataset.model_num_classes}
 ignored_label_inds: [0]
 in_channels: 3  # never train on intensity
 dim_output: [16, 64, 128, 256]  # NOTE: needs to be overridden for metric learning
