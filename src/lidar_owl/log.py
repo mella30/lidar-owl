@@ -1,10 +1,8 @@
 # TODO: visu, runtime
 import numpy as np
-import yaml
 from pathlib import Path
-import open3d
 
-def _git_hash():
+def get_git_hash():
     git_dir = Path(__file__).resolve().parents[2] / ".git"
     try:
         head = (git_dir / "HEAD").read_text().strip()
@@ -26,48 +24,6 @@ def _git_hash():
         return head
     except OSError:
         return "unknown"
-
-# TODO: these two functions can be fused and should be attached to the dataset object
-def _semkitti_cmap(num_classes: int) -> np.ndarray:
-    # gets semantickitti colors from open3d lib 
-    resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
-    data = yaml.safe_load(resource.read_text())
-    # remap colors from preds to original semnantickitti colors
-    color_map = {int(k): np.array(v, dtype=np.float32) / 255.0
-                for k, v in data["color_map"].items()} 
-    inv_map = {int(k): int(v) for k, v in data["learning_map_inv"].items()}
-    palette = np.zeros((num_classes, 3), dtype=np.float32)
-    for train_id in range(num_classes):
-        raw_id = inv_map[train_id]
-        palette[train_id] = color_map[raw_id]
-    return palette
-
-def _semkitti_train_id_to_name(num_classes: int) -> list[str]:
-    """Map train IDs (after learning_map) to human readable SemanticKITTI names."""
-    resource = Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
-    data = yaml.safe_load(resource.read_text())
-    inv_map = {int(k): int(v) for k, v in data["learning_map_inv"].items()}
-    labels = {int(k): v for k, v in data["labels"].items()}
-    names = []
-    for train_id in range(num_classes):
-        raw_id = inv_map[train_id]
-        names.append(labels[raw_id])
-    return names
-
-def _label_names_from_dataset(dataset, num_classes: int) -> list[str]:
-    """Prefer dataset-provided label_to_names (train IDs); fallback to SemanticKITTI mapping."""
-    names_map = getattr(dataset, "label_to_names", None)
-    if isinstance(names_map, dict) and names_map:
-        return [names_map.get(i, f"class_{i}") for i in range(num_classes)]
-    return _semkitti_train_id_to_name(num_classes)
-
-
-def _compact_label_names_from_dataset(dataset, num_classes: int, ignored_label_inds) -> list[str]:
-    """Names for the compact model label space after ignored labels are removed."""
-    full_names = _label_names_from_dataset(dataset, num_classes + len(ignored_label_inds))
-    ignored = set(int(label) for label in ignored_label_inds if int(label) >= 0)
-    return [name for idx, name in enumerate(full_names) if idx not in ignored][:num_classes]
-
 
 def _draw(pix, depth_key, pix_labels, width, height, palette):
     # flatten pixel coords for fast per-pixel collision handling

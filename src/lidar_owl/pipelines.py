@@ -27,13 +27,13 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         # color palette for visu
         self.num_classes = self.dataset.num_classes
         self.num_trained_classes = self.model.cfg['num_classes']  # trained classes in model != available classes in dataset (incl. invalid)
-        self.color_map = log._semkitti_cmap(self.num_classes)  # TODO: make that depend on dataset, not semantickitti-specific
+        self.color_map = self.dataset.label_colors[:self.num_classes]
         self.range_size = getattr(self.dataset, "range_size", None)
         self.ignored_label_inds = getattr(self.model.cfg, "ignored_label_inds", []) 
-        self.class_names = log._compact_label_names_from_dataset(
-            self.dataset,
+        self.class_names = self.dataset.get_label_names(
             self.num_trained_classes,
-            self.ignored_label_inds,
+            compact=True,
+            ignored_label_inds=self.ignored_label_inds,
         )
         # early stopping helper variables
         self.val_miou_history = [-1.0]
@@ -57,11 +57,8 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
 
         eval_log_dir = Path(self.cfg.eval_sum_dir) / timestamp
         writer = SummaryWriter(log_dir=str(eval_log_dir))
-        # log checkpoint info in tb for reference
-        writer.add_text("test/checkpoint_path", str(ckpt_path), 0)
-        writer.add_scalar("test/checkpoint_epoch", int(ckpt_path.stem.split("_")[-1]), 0)
         # log git hash for eval
-        writer.add_text("test_run/git_hash", log._git_hash(), 0)
+        writer.add_text("test_run/git_hash", log.get_git_hash(), 0)
         return writer
 
     def _update_test_metric(self, inference_result, gt_labels):
@@ -115,7 +112,7 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
     def save_logs(self, writer, epoch):
         # log train git hash for reference
         if epoch == 0:
-            writer.add_text("train_run/git_hash", log._git_hash(), 0)
+            writer.add_text("train_run/git_hash", log.get_git_hash(), 0)
 
         # add visu of train / val preds
         stages = list(self.summary.keys())

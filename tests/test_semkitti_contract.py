@@ -6,12 +6,8 @@ from pathlib import Path
 import open3d._ml3d
 from open3d.ml.torch.modules import losses as ml3d_losses
 
-from lidar_owl.log import (
-    _compact_label_names_from_dataset,
-    project,
-    _semkitti_cmap,
-    _semkitti_train_id_to_name,
-)
+from lidar_owl.datasets import SemanticKITTIFlat
+from lidar_owl.log import project
 from lidar_owl.ml3d_util import restore_prediction_labels
 from lidar_owl.metrics import SemSegMetricExt
 
@@ -25,18 +21,22 @@ def _semkitti_data():
         return yaml.safe_load(f)
 
 
+def _dummy_semkitti_dataset():
+    dataset = object.__new__(SemanticKITTIFlat)
+    dataset.class_config = _semkitti_data()
+    dataset._init_label_metadata()
+    return dataset
+
+
 def test_semkitti_name_contract_known_ids():
-    names = _semkitti_train_id_to_name(20)
+    names = _dummy_semkitti_dataset().get_label_names(20)
     assert len(names) == 20
     assert names[0] == "unlabeled"
     assert names[19] == "traffic-sign"
 
 
 def test_compact_semkitti_metric_names_skip_ignored_unlabeled():
-    class DummyDataset:
-        label_to_names = {idx: name for idx, name in enumerate(_semkitti_train_id_to_name(20))}
-
-    names = _compact_label_names_from_dataset(DummyDataset(), 19, ignored_label_inds=[0])
+    names = _dummy_semkitti_dataset().get_label_names(19, compact=True, ignored_label_inds=[0])
 
     assert len(names) == 19
     assert names[0] == "car"
@@ -44,7 +44,7 @@ def test_compact_semkitti_metric_names_skip_ignored_unlabeled():
 
 
 def test_semkitti_palette_shape_and_range():
-    palette = _semkitti_cmap(20)
+    palette = _dummy_semkitti_dataset().get_label_colors(20)
     assert palette.shape == (20, 3)
     assert np.all(palette >= 0.0)
     assert np.all(palette <= 1.0)
@@ -137,7 +137,7 @@ def test_restored_prediction_labels_match_gt_projection_colors():
     )
     gt = np.array([[1], [9], [19]], dtype=np.int64)
     pred_compact = np.array([[0], [8], [18]], dtype=np.int64)
-    palette = _semkitti_cmap(20)
+    palette = _dummy_semkitti_dataset().get_label_colors(20)
 
     gt_img = project(points, gt, palette, view="bev", bev_size=(64, 64))
     pred_img = project(
