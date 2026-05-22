@@ -9,15 +9,10 @@ import lidar_owl.util as util
 class SemSegMetricExt(ml3d_metrics.SemSegMetric):
     """Extended semantic-segmentation metrics compatible with Open3D-ML."""
 
-    def __init__(self, label_names):
+    def __init__(self, label_names: list[str]):
         super().__init__()
 
-        # TODO: check this at init
-        if label_names is None:
-            raise ValueError("label_names must be provided from the dataset.")
-        if len(label_names) == 0:
-            raise ValueError("label_names must not be empty.")
-        self.label_names = list(label_names)
+        self.label_names = label_names
 
     def update(self, scores, labels):
         super().update(scores, labels)
