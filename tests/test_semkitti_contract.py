@@ -24,7 +24,6 @@ def _semkitti_data():
 def _dummy_semkitti_dataset():
     dataset = object.__new__(SemanticKITTIFlat)
     dataset.class_config = _semkitti_data()
-    dataset._init_label_metadata()
     return dataset
 
 
