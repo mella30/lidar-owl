@@ -1,9 +1,6 @@
 import numpy as np
 import pytest
-import yaml
 import torch
-from pathlib import Path
-import open3d._ml3d
 from open3d.ml.torch.modules import losses as ml3d_losses
 
 from lidar_owl.datasets import SemanticKITTIFlat
@@ -12,38 +9,38 @@ from lidar_owl.ml3d_util import restore_prediction_labels
 from lidar_owl.metrics import SemSegMetricExt
 
 
-def _semkitti_resource():
-    return Path(open3d._ml3d.__file__).parent / "datasets" / "_resources" / "semantic-kitti.yaml"
+@pytest.fixture(scope="module")
+def semkitti_dataset(tmp_path_factory):
+    dataset_path = tmp_path_factory.mktemp("semantickitti")
+    return SemanticKITTIFlat(
+        dataset_path=str(dataset_path),
+        cache_dir=str(dataset_path / "cache"),
+        use_cache=False,
+        test_result_folder=str(dataset_path / "test_results"),
+        training_split=[],
+        validation_split=[],
+        test_split=[],
+        sensor_fov=[2048, 64],
+    )
 
 
-def _semkitti_data():
-    with _semkitti_resource().open() as f:
-        return yaml.safe_load(f)
-
-
-def _dummy_semkitti_dataset():
-    dataset = object.__new__(SemanticKITTIFlat)
-    dataset.class_config = _semkitti_data()
-    return dataset
-
-
-def test_semkitti_name_contract_known_ids():
-    names = _dummy_semkitti_dataset().get_label_names(20)
+def test_semkitti_name_contract_known_ids(semkitti_dataset):
+    names = semkitti_dataset.get_label_names(20)
     assert len(names) == 20
     assert names[0] == "unlabeled"
     assert names[19] == "traffic-sign"
 
 
-def test_compact_semkitti_metric_names_skip_ignored_unlabeled():
-    names = _dummy_semkitti_dataset().get_label_names(19, compact=True, ignored_label_inds=[0])
+def test_compact_semkitti_metric_names_skip_ignored_unlabeled(semkitti_dataset):
+    names = semkitti_dataset.get_label_names(19, compact=True, ignored_label_inds=[0])
 
     assert len(names) == 19
     assert names[0] == "car"
     assert names[-1] == "traffic-sign"
 
 
-def test_semkitti_palette_shape_and_range():
-    palette = _dummy_semkitti_dataset().get_label_colors(20)
+def test_semkitti_palette_shape_and_range(semkitti_dataset):
+    palette = semkitti_dataset.get_label_colors(20)
     assert palette.shape == (20, 3)
     assert np.all(palette >= 0.0)
     assert np.all(palette <= 1.0)
@@ -130,13 +127,13 @@ def test_restore_prediction_labels_reinserts_ignored_train_ids():
     np.testing.assert_array_equal(restored, np.array([[1], [9], [19]], dtype=np.int64))
 
 
-def test_restored_prediction_labels_match_gt_projection_colors():
+def test_restored_prediction_labels_match_gt_projection_colors(semkitti_dataset):
     points = np.array(
         [[0.0, 0.0, 0.0], [10.0, 0.0, 1.0], [0.0, 10.0, 2.0]], dtype=np.float32
     )
     gt = np.array([[1], [9], [19]], dtype=np.int64)
     pred_compact = np.array([[0], [8], [18]], dtype=np.int64)
-    palette = _dummy_semkitti_dataset().get_label_colors(20)
+    palette = semkitti_dataset.get_label_colors(20)
 
     gt_img = project(points, gt, palette, view="bev", bev_size=(64, 64))
     pred_img = project(
