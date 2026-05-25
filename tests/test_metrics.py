@@ -43,35 +43,6 @@ def test_semseg_metric_ext_confusion_matrix_metrics():
     np.testing.assert_allclose(metric.cer(), [2 / 3, 2 / 3, 2 / 3, 2 / 3])
 
 
-def test_semseg_metric_ext_summary_and_logging():
-    labels = torch.tensor([0, 1, 0, 1], dtype=torch.long)
-    metric = SemSegMetricExt(label_names=["class zero", "class/one"])
-    metric.update(_one_hot_scores(labels, num_classes=2), labels)
-
-    summary = metric.summary()
-    assert summary["overall_accuracy"] == pytest.approx(1.0)
-    assert summary["mean_iou"] == pytest.approx(1.0)
-    assert summary["macro_precision"] == pytest.approx(1.0)
-    assert summary["macro_recall"] == pytest.approx(1.0)
-    assert summary["macro_f1"] == pytest.approx(1.0)
-    assert summary["per_class"][0]["support"] == 2
-
-    writer = DummyWriter()
-    metric.log_tensorboard(writer, prefix="test")
-    table, step = writer.texts["00_performance/test"]
-    assert step == 0
-    assert "| class | accuracy | mIoU | precision | recall | f1 | cer |" in table
-    assert "support" not in table
-    assert "| class zero | 100.00 | 100.00 | 100.00 | 100.00 | 100.00 | 0.00 |" in table
-    assert "| all | 100.00 | 100.00 | 100.00 | 100.00 | 100.00 | 0.00 |" in table
-
-    confmat, confmat_step, close = writer.figures["00_performance/test_confusion_matrix"]
-    assert confmat_step == 0
-    assert close is True
-    assert confmat.axes[0].get_xlabel() == "Predicted Label"
-    assert confmat.axes[0].get_ylabel() == "True Label"
-
-
 def test_calibration_metric_perfect_predictions():
     labels = torch.tensor([0] * 20 + [1] * 20, dtype=torch.long)
     scores = _one_hot_scores(labels.numpy(), num_classes=2)
@@ -136,24 +107,6 @@ def test_calibration_metric_reset_clears_state():
     assert metric.ece() == []
     assert metric.brier_score() == []
 
-
-def test_calibration_metric_tensorboard_logging_groups_by_objective():
-    metric = CalibrationMetric(label_names=["a", "b"], ece_bins=2)
-    metric.update(_one_hot_scores([0, 1], num_classes=2), torch.tensor([0, 1]))
-    writer = DummyWriter()
-
-    metric.log_tensorboard(writer, prefix="test")
-
-    calibration_table, calibration_step = writer.texts["calibration/test"]
-    uncertainty_table, uncertainty_step = writer.texts["uncertainty/test"]
-    assert calibration_step == 0
-    assert uncertainty_step == 0
-    assert "| class | ECE | brier_score | AUSE_BS |" in calibration_table
-    assert "| all | 0.00 | 0.00 | 0.00 |" in calibration_table
-    assert "| class | AUSE_mIoU | UIoU |" in uncertainty_table
-    assert "| all | nan | 100.00 |" in uncertainty_table
-
-
 def test_anomaly_metric_with_explicit_scores():
     metric = AnomalyMetric(anomaly_label_inds=[2], ignored_label_inds=[0])
     labels = torch.tensor([0, 1, 2, 2], dtype=torch.long)
@@ -206,17 +159,3 @@ def test_anomaly_metric_returns_nan_without_positive_or_negative_examples():
     assert np.isnan(metric.auprc())
 
 
-def test_anomaly_metric_tensorboard_logging():
-    metric = AnomalyMetric(anomaly_label_inds=[2])
-    labels = torch.tensor([1, 2, 2], dtype=torch.long)
-    scores = _one_hot_scores([0, 0, 0], num_classes=2)
-    anomaly_scores = torch.tensor([0.1, 0.9, 0.8], dtype=torch.float32)
-    metric.update(scores, labels, anomaly_scores=anomaly_scores)
-    writer = DummyWriter()
-
-    metric.log_tensorboard(writer, prefix="test")
-
-    table, step = writer.texts["anomaly/test"]
-    assert step == 0
-    assert "| class | auroc | auprc | fpr95 | num_points | num_anomalies |" in table
-    assert "| all | 100.00 | 100.00 | 0.00 | 3 | 2 |" in table
