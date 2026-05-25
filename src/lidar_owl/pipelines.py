@@ -65,16 +65,21 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         if not (gt_labels > 0).any():
             return
 
+        raw_scores = torch.as_tensor(inference_result["predict_scores"], device=self.device)
+        raw_labels = torch.as_tensor(gt_labels, device=self.device)
+
         # MUST use filter_valid_label here as well, otherwise metrics would compare
         # compact model predictions against non-compact dataset train IDs.
         valid_scores, valid_labels = ml3d_losses.filter_valid_label(
-            torch.as_tensor(inference_result["predict_scores"], device=self.device),
-            torch.as_tensor(gt_labels, device=self.device),
+            raw_scores,
+            raw_labels,
             num_classes=self.num_trained_classes,
             ignored_label_inds=self.ignored_label_inds,
             device=self.device,
         )
         self.metric_test.update(valid_scores, valid_labels)
+        self.calibration_metric_test.update(valid_scores, valid_labels)
+        self.anomaly_metric_test.update(raw_scores, raw_labels)
 
 
     def _check_early_stopping(self, writer, epoch):
@@ -107,7 +112,6 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
                 )
                 writer.flush()
                 raise EarlyStopping
-            
 
     def save_logs(self, writer, epoch):
         # log train git hash for reference
@@ -116,7 +120,6 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
 
         # add visu of train / val preds
         stages = list(self.summary.keys())
-        proj_view = self.cfg.summary["view"]
         range_size = self.dataset.range_size
 
         for stage in stages:
@@ -131,13 +134,30 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
             pred = ml3d_util.restore_prediction_labels(pred, self.ignored_label_inds)
             visible_mask = (gt > 0).reshape(-1)
 
-            gt_img = log.project(xyz, gt, self.color_map, view=proj_view, range_size=range_size, visible_mask=visible_mask,)
-            pred_img = log.project(xyz, pred, self.color_map, view=proj_view, range_size=range_size, visible_mask=visible_mask)
+            gt_img = log.project(xyz, gt, self.color_map, view="bev", range_size=range_size, visible_mask=visible_mask,)
+            pred_img = log.project(xyz, pred, self.color_map, view="bev", range_size=range_size, visible_mask=visible_mask)
 
             if gt_img is not None:
                 writer.add_image(f"{stage}/projection_gt", gt_img.transpose(2, 0, 1), epoch)
             if pred_img is not None:
                 writer.add_image(f"{stage}/projection_pred", pred_img.transpose(2, 0, 1), epoch)
+
+            metric_attr = {
+                "train": "metric_train",
+                "valid": "metric_val",  # Open3DML calles the valid metric "val" but the stage "valid", thus the mapping
+            }.get(stage, f"metric_{stage}")
+            metric = getattr(self, metric_attr, None)
+            confusion_matrix = getattr(metric, "confusion_matrix", None)
+            if confusion_matrix is None:
+                return
+
+            metrics._log_confusion_matrix(
+                writer,
+                f"{stage}/confusion_matrix",
+                self.class_names,
+                confusion_matrix,
+                step=epoch,
+            )
 
         if epoch > 0:
             self._check_early_stopping(writer, epoch)
@@ -160,6 +180,11 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
         self.load_ckpt(str(ckpt_path))
 
         self.metric_test = metrics.SemSegMetricExt(label_names=self.class_names)
+        self.calibration_metric_test = metrics.CalibrationMetric(label_names=self.class_names)
+        self.anomaly_metric_test = metrics.AnomalyMetric(
+            anomaly_label_inds=getattr(self.cfg, "anomaly_label_inds", []),
+            ignored_label_inds=self.ignored_label_inds,
+        )
         writer = self._create_test_writer(ckpt_path)
 
         test_dataset = self.dataset.get_split('test')
@@ -185,10 +210,10 @@ class SemanticSegmentationExtended(ml3d.pipelines.SemanticSegmentation):
                 range_size=range_size,
             )
 
-        if len(self.metric_test.acc()) > 0:
-            writer.add_scalar("test/accuracy", self.metric_test.acc()[-1], len(test_dataset))
-        if len(self.metric_test.iou()) > 0:
-            writer.add_scalar("test/mIoU", self.metric_test.iou()[-1], len(test_dataset))
+        # write summary once in the end (step can be 0)
+        self.metric_test.log_tensorboard(writer, prefix="test")
+        self.calibration_metric_test.log_tensorboard(writer, prefix="test")
+        self.anomaly_metric_test.log_tensorboard(writer, prefix="test")
 
         writer.flush()
         writer.close()
