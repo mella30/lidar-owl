@@ -4,7 +4,7 @@
 # TODO: anomaly models
 
 import open3d.ml.torch as ml3d
-from omegaconf import OmegaConf
+import logging
 
 from open3d.ml.torch.modules import losses as ml3d_losses
 from lidar_owl.losses import resolve_loss
@@ -26,6 +26,7 @@ class BaseFlatAdapter:
         else:
             # Fallback to Open3D-ML's default semseg loss object when no custom
             # callable loss was attached to the model.
+            logging.warning(f"Attached loss object is not callable. Using Open3D-ML's default {type(Loss).__name__} instead.")
             loss = Loss.weighted_CrossEntropyLoss(scores, labels)
         return loss, labels, scores
 
@@ -38,11 +39,12 @@ class RandLANetFlat(BaseFlatAdapter, ml3d.models.RandLANet):  # get_loss mixin m
 
         # resolve configured loss before Open3D model init
         resolved_loss = resolve_loss(
-            kwargs["loss"],
+            kwargs.get("loss", None),
             num_classes=kwargs.get("num_classes"),
         )
         if resolved_loss is not None:
             kwargs["loss"] = resolved_loss
+        # if resolved_loss is None, the default SemSegLoss will be instantiated in the run_train pipeline
 
         super().__init__(*args, **kwargs)
         self.custom_loss = resolved_loss

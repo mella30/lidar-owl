@@ -1,9 +1,9 @@
 # TODO: hierarchical losses, metric learning
 
+import logging
+
 import torch
 import torch.nn.functional as F
-from omegaconf import DictConfig, OmegaConf
-
 
 class CrossEntropyFlat(torch.nn.Module):
     # Cross-entropy on compact semantic-segmentation labels.
@@ -37,29 +37,22 @@ LOSS_REGISTRY = {
 
 
 def resolve_loss(loss_cfg, num_classes=None):
+    """
+    Resolve the loss function based on the configuration.
+    Allowed are only the losses defined in LOSS_REGISTRY and open3dml's SemSegLoss as default fallback.
+    """
     if loss_cfg is None:
-        return None
+        logging.info("No loss specified. Fallback to Open3D-ML default SemSegLoss...")
+        return None  # default open3dml's SemSegLoss will be used
+    loss_name = str(loss_cfg.pop("name"))
 
-    if isinstance(loss_cfg, torch.nn.Module):
-        return loss_cfg
+    # try to load from own loss registry & return
+    loss_class = LOSS_REGISTRY.get(loss_name.lower())
+    if loss_class is not None:
+        # set given umber of classes as default (defined in dataset config)
+        loss_cfg.setdefault("num_classes", num_classes)
+        return loss_class(**loss_cfg)
 
-    if isinstance(loss_cfg, DictConfig):
-        loss_cfg = OmegaConf.to_container(loss_cfg, resolve=True)
-
-    if isinstance(loss_cfg, dict):
-        cfg = dict(loss_cfg)
-        name = cfg.pop("name", None)
-        if not name:
-            raise KeyError("Loss config must contain a 'name' field.")
-        key = name.lower()
-        if key not in LOSS_REGISTRY:
-            print(f"Unknown loss '{name}'. Available losses: {', '.join(sorted(LOSS_REGISTRY.keys()))}")
-            print("Fallback to Open3D-ML default SemSegLoss...")
-            return None
-        cfg.setdefault("num_classes", num_classes)
-        return LOSS_REGISTRY[key](**cfg)
-
-    raise TypeError(
-        "Unsupported loss config type. Expected DictConfig/dict with 'name' or torch.nn.Module "
-        f"instance, got {type(loss_cfg).__name__}."
-    )
+    logging.info(f"Unknown loss '{loss_name}'. Available losses: {', '.join(sorted(LOSS_REGISTRY))}")
+    logging.info("Fallback to Open3D-ML default SemSegLoss...")
+    return None

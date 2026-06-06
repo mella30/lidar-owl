@@ -3,6 +3,7 @@ import numpy as np
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
 import shutil
+import logging
 
 from lidar_owl.ml3d_util import patch_open3d_default_batcher_resize_warning, resolve_model, resolve_dataset
 
@@ -14,11 +15,11 @@ def _clean_checkpoints(cfg: DictConfig, model_name, dataset_name):
     target_dir = main_log_dir / f"{model_name}_{dataset_name}_torch"
     if target_dir.exists():
         shutil.rmtree(target_dir)
-        print(f"[clean] removed existing log dir: {target_dir}")
+        logging.info(f"Cleanup: removed existing log dir: {target_dir}")
     cache_dir = Path(cfg.dataset["cache_dir"])
     if cache_dir.exists():
         shutil.rmtree(cache_dir)
-        print(f"[clean] removed cache dir: {cache_dir}")
+        logging.info(f"Cleanup: removed cache dir: {cache_dir}")
 
 # NOTE: remove in final version
 def _open3d_ce_class_weights(num_per_class):
